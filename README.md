@@ -4,6 +4,8 @@ Takes a fresh Debian server (IP + user + password) and makes it production-ready
 
 **Ansible provisions servers. [homelab-catalog](https://github.com/st0o0/homelab-catalog) manages what runs on them.**
 
+**Related repos:** [homelab-catalog](https://github.com/st0o0/homelab-catalog) (Dockhand templates) · [dotfiles](https://github.com/st0o0/dotfiles) (shell toolchain)
+
 ## First-Time Setup
 
 ### 1. Open the DevContainer
