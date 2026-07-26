@@ -64,3 +64,8 @@
     name: "{{ docker_user }}"
     groups: docker
     append: true
+  register: _docker_group
+
+- name: Reset SSH connection so new group membership takes effect
+  ansible.builtin.meta: reset_connection
+  when: _docker_group.changed

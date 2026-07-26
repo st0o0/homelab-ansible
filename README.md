@@ -225,7 +225,9 @@ Installs standard tools (`btop`, `git`, `curl`, `ca-certificates`, `figlet`), se
 
 ### docker
 
-Installs Docker CE from the official Docker APT repository (not the distro's `docker.io`). Detects architecture automatically (amd64, arm64).
+Installs Docker CE from the official Docker APT repository (not the distro's `docker.io`). Detects architecture automatically (amd64, arm64). Adds the deploy user to the `docker` group and resets the Ansible SSH connection so subsequent roles (like `node_agent`) can use Docker without `sudo`.
+
+After first provisioning, **log out and back in** on the server for your interactive SSH session to pick up the new group membership (`exit` + reconnect, or `newgrp docker` as a one-shot).
 
 **Variables** (`group_vars/all/docker.yml`):
 - `docker_user` — user added to the docker group (default: `ansible_user`)
