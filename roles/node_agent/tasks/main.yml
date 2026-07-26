@@ -1,0 +1,102 @@
+- name: Skip node_agent if nothing enabled
+  ansible.builtin.meta: end_role
+  when: not node_agent_alloy_enabled and not node_agent_hawser_enabled
+
+- name: Check Docker is installed
+  ansible.builtin.stat:
+    path: /usr/bin/docker
+  register: _node_agent_docker_bin
+
+- name: Fail if Docker isn't installed
+  ansible.builtin.assert:
+    that: _node_agent_docker_bin.stat.exists
+    fail_msg: >-
+      node_agent requires Docker. Run the docker role first (e.g. plain
+      `just deploy <host>`, or `--tags docker,node_agent`).
+
+- name: Create stack directories
+  ansible.builtin.file:
+    path: "{{ node_agent_deploy_path }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: >-
+    {{ ['.'] + (['alloy'] if node_agent_alloy_enabled else []) }}
+
+- name: Copy Alloy config from stacks source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../stacks/observability-agent/alloy/config.alloy"
+    dest: "{{ node_agent_deploy_path }}/alloy/config.alloy"
+    mode: "0644"
+  when: node_agent_alloy_enabled
+  notify: Restart node-agent stack
+
+- name: Deploy base compose file
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ node_agent_deploy_path }}/compose.yml"
+    mode: "0644"
+  notify: Restart node-agent stack
+
+- name: Deploy Alloy compose file
+  ansible.builtin.copy:
+    src: compose.alloy.yml
+    dest: "{{ node_agent_deploy_path }}/compose.alloy.yml"
+    mode: "0644"
+  when: node_agent_alloy_enabled
+  notify: Restart node-agent stack
+
+- name: Remove Alloy compose file when disabled
+  ansible.builtin.file:
+    path: "{{ node_agent_deploy_path }}/compose.alloy.yml"
+    state: absent
+  when: not node_agent_alloy_enabled
+  notify: Restart node-agent stack
+
+- name: Deploy Hawser compose file
+  ansible.builtin.copy:
+    src: compose.hawser.yml
+    dest: "{{ node_agent_deploy_path }}/compose.hawser.yml"
+    mode: "0644"
+  when: node_agent_hawser_enabled
+  notify: Restart node-agent stack
+
+- name: Remove Hawser compose file when disabled
+  ansible.builtin.file:
+    path: "{{ node_agent_deploy_path }}/compose.hawser.yml"
+    state: absent
+  when: not node_agent_hawser_enabled
+  notify: Restart node-agent stack
+
+- name: Deploy Bifrost compose override
+  ansible.builtin.copy:
+    src: compose.bifrost.yml
+    dest: "{{ node_agent_deploy_path }}/compose.bifrost.yml"
+    mode: "0644"
+  when: node_agent_bifrost_enabled
+  notify: Restart node-agent stack
+
+- name: Remove Bifrost compose override when disabled
+  ansible.builtin.file:
+    path: "{{ node_agent_deploy_path }}/compose.bifrost.yml"
+    state: absent
+  when: not node_agent_bifrost_enabled
+  notify: Restart node-agent stack
+
+- name: Deploy environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ node_agent_deploy_path }}/.env"
+    mode: "0600"
+  notify: Restart node-agent stack
+
+- name: Start node-agent stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_agent_deploy_path }}"
+    files: "{{ _node_agent_compose_files }}"
+    state: present
+  vars:
+    _node_agent_compose_files: >-
+      {{ ['compose.yml']
+         + (['compose.alloy.yml'] if node_agent_alloy_enabled else [])
+         + (['compose.hawser.yml'] if node_agent_hawser_enabled else [])
+         + (['compose.bifrost.yml'] if node_agent_bifrost_enabled else []) }}

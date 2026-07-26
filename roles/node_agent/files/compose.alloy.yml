@@ -1,0 +1,31 @@
+services:
+  alloy:
+    image: grafana/alloy:v1.17.1
+    container_name: node-agent-alloy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+    environment:
+      - HOST_HOSTNAME=${HOST_HOSTNAME}
+      - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
+      - REMOTE_WRITE_URL=${REMOTE_WRITE_URL}
+      - LOGS_PUSH_URL=${LOGS_PUSH_URL}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      - /var/log:/var/log/host:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  alloy-data:

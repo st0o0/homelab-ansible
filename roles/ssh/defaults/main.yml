@@ -1,0 +1,5 @@
+ssh_user: "{{ ansible_user | default('deploy') }}"
+ssh_exclusive: true
+ssh_bitwarden_folder: "Homelab/SSH"
+ssh_yubikey_public_keys: []
+ssh_extra_public_keys: []

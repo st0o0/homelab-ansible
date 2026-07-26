@@ -1,0 +1,24 @@
+- name: Converge all hosts
+  hosts: all
+  become: true
+  roles:
+    - role: hostname
+      tags: [hostname]
+    - role: base
+      tags: [base]
+    - role: swap
+      tags: [swap]
+    - role: unattended_upgrades
+      tags: [unattended_upgrades]
+    - role: ufw
+      tags: [ufw]
+    - role: docker
+      tags: [docker]
+    - role: cron
+      tags: [cron]
+    - role: motd
+      tags: [motd]
+    - role: dotfiles
+      tags: [dotfiles]
+    - role: node_agent
+      tags: [node_agent]

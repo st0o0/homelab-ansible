@@ -1,0 +1,9 @@
+.vscode/
+Thumbs.db
+.claude/
+*.agekey
+.sops-age-key
+.vault-password
+.devcontainer/linux/devcontainer-lock.json
+.devcontainer/windows/devcontainer-lock.json
+node_modules/

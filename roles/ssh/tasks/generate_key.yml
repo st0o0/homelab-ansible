@@ -1,0 +1,101 @@
+- name: Create temp directory for key generation
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: ssh_backup_
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  register: _ssh_tmpdir
+
+- name: Generate ed25519 backup key
+  ansible.builtin.command:
+    cmd: >-
+      ssh-keygen -t ed25519
+      -f {{ _ssh_tmpdir.path }}/id_backup
+      -N ""
+      -C "backup-{{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  changed_when: true
+
+- name: Read public key
+  ansible.builtin.slurp:
+    src: "{{ _ssh_tmpdir.path }}/id_backup.pub"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  register: _ssh_pubkey_b64
+
+- name: Read private key
+  ansible.builtin.slurp:
+    src: "{{ _ssh_tmpdir.path }}/id_backup"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  register: _ssh_privkey_b64
+
+- name: Set key contents as facts
+  ansible.builtin.set_fact:
+    _ssh_pubkey: "{{ _ssh_pubkey_b64.content | b64decode | trim }}"
+    _ssh_privkey: "{{ _ssh_privkey_b64.content | b64decode }}"
+
+- name: Get key fingerprint
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail
+      && ssh-keygen -lf {{ _ssh_tmpdir.path }}/id_backup.pub | awk '{print $2}'
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  changed_when: false
+  register: _ssh_fingerprint
+
+- name: Build Bitwarden SSH key item JSON
+  ansible.builtin.set_fact:
+    _ssh_bw_item:
+      type: 5
+      name: "ssh-backup-{{ inventory_hostname }}"
+      folderId: "{{ _ssh_bw_folder_id }}"
+      sshKey:
+        privateKey: "{{ _ssh_privkey }}"
+        publicKey: "{{ _ssh_pubkey }}"
+        keyFingerprint: "{{ _ssh_fingerprint.stdout }}"
+
+- name: Write Bitwarden item JSON to temp file
+  ansible.builtin.copy:
+    content: "{{ _ssh_bw_item | to_json }}"
+    dest: "{{ _ssh_tmpdir.path }}/bw_item.json"
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+
+- name: Store key in Bitwarden
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail
+      && cat {{ _ssh_tmpdir.path }}/bw_item.json | bw encode | bw create item
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  environment:
+    BW_SESSION: "{{ lookup('env', 'BW_SESSION') }}"
+  no_log: true
+  changed_when: true
+
+- name: Remove temp directory
+  ansible.builtin.file:
+    path: "{{ _ssh_tmpdir.path }}"
+    state: absent
+  delegate_to: localhost
+  become: false
+  check_mode: false
+
+- name: Set backup public key fact
+  ansible.builtin.set_fact:
+    ssh_backup_public_key: "{{ _ssh_pubkey }}"

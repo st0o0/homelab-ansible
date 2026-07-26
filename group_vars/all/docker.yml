@@ -1,0 +1,9 @@
+docker_user: "{{ ansible_user }}"
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+docker_apt_key_url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+docker_apt_key_dest: /etc/apt/keyrings/docker.asc

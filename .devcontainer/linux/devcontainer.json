@@ -1,0 +1,62 @@
+{
+    "name": "Homelab Ansible — Linux",
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "24"
+        }
+    },
+
+    "mounts": [
+        "source=homelab-ansible-ssh,target=/home/vscode/.ssh,type=volume",
+        "source=homelab-ansible-sops,target=/home/vscode/.config/sops,type=volume",
+        "source=/run/user/1000/gnupg/S.gpg-agent.ssh,target=/run/user/1000/gnupg/S.gpg-agent.ssh,type=bind",
+        "source=${localEnv:HOME}/snap/bw/current/Bitwarden CLI,target=/home/vscode/.config/Bitwarden CLI,type=bind,consistency=cached"
+    ],
+
+    "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.ssh /home/vscode/.config && sudo chmod +x scripts/install-dependencies.sh && bash scripts/install-dependencies.sh",
+
+    "postStartCommand": "bash scripts/update-dotfiles.sh",
+
+    "remoteEnv": {
+        "BW_SERVER_URL": "${localEnv:BW_SERVER_URL}",
+        // Dotfiles auto-attach a persistent tmux session on every interactive
+        // shell. Without this, SSHing from a devcontainer shell into a host
+        // (which also auto-attaches tmux) nests tmux inside tmux — this
+        // container layer doesn't need its own persistent session, so skip it.
+        "NO_AUTOSTART": "1"
+    },
+
+    "containerEnv": {
+        "ANSIBLE_CONFIG": "${containerWorkspaceFolder}/ansible.cfg",
+        "SOPS_AGE_KEY_FILE": "/home/vscode/.config/sops/age/keys.txt",
+        "SSH_AUTH_SOCK": "/run/user/1000/gnupg/S.gpg-agent.ssh",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "TZ": "${localEnv:TZ:Europe/Berlin}",
+        // Drives the devcontainer badge in starship.toml (see dotfiles repo)
+        // so it's visually obvious you're inside the devcontainer.
+        "DEVCONTAINER": "1"
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "redhat.ansible",
+                "ms-azuretools.vscode-docker"
+            ],
+            "settings": {
+                "ansible.python.interpreterPath": "/usr/bin/python3",
+                "ansible.ansible.path": "/usr/bin/ansible",
+                "ansible.ansibleLint.path": "/usr/bin/ansible-lint",
+                "ansible.ansibleLint.enabled": true,
+                "files.associations": {
+                    "*.yml": "ansible",
+                    "*.yaml": "ansible"
+                },
+                "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font Mono', monospace"
+            }
+        }
+    }
+}

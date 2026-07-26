@@ -1,0 +1,11 @@
+ssh_user: st0o0
+ssh_exclusive: true
+ssh_bitwarden_folder: "Homelab/SSH"
+ssh_yubikey_public_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDA2JTkXBWKdilFiW6JB4dRx6NHfsXZ0FUBE8DwrwNC6Tz27CKeo9nZBh/NuyXwDC8URG8zJOsUhlQo3P4MEeRECTavfwO3kZo9H8mJZzaXwZwBBv9PIXFnAHmQuXs+BgxxR6um4vnVG8Mqhy5WPvY2ChgGKHclB1boPuFmrAgDoh8bRd/z/vQizOd7dPP6xfcofXy7Kw0U16SFn35yker4/CLTa9hiJjDWADV2uuU20BaqKAqO+mwUUtG1IjAkk7h9XGtTFimM0g9kIwhwH2jPrBC+tLkEWtK9HR7wHJJ7vLM09MuCvCvHKFon88SnP5mlR3Q9qvmMJK0Zwsayz05RB7QR9Da8rlMKxzQV6oFevXdJBrcb2vCE/AdW2QqjQ1ZbhAGJzeRyyWDTEhq7EvHoVmyK4OgmEr4J7jsHYn8PepI4l+xeFrMpOyXJxy6QKsx6JN9YVen7jWrBMDec2xk064DB0+M35t0kpYn6Xq4U/8ZyrZCa7X1SmMp6zFsdo7hfY34HqxKYQhwK7jRjS8LSgxgQRj9tgjWK85V/2tcpsmnS8x94A11GVLdlTRvInahdfG6Zf+N6ne0QwQGSyRzbQgTY7U46lmITFNdfgCdcix74hdW0ov6RBxocOFZYsLZPWsfJuHaE57xLZNxTSLAfluDVcm/+YRw5hVEnLk47iQ== openpgp:0x207A72A3"
+ssh_extra_public_keys: []
+
+ansible_ssh_private_key_file: >-
+  {{ '~/.ssh/id_backup_' + inventory_hostname
+     if lookup('pipe', 'test -f ~/.ssh/id_backup_' + inventory_hostname + ' && echo yes || echo no') == 'yes'
+     else '~/.ssh/id_ansible' }}

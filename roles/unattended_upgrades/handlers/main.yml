@@ -1,0 +1,4 @@
+- name: Restart unattended-upgrades
+  ansible.builtin.systemd:
+    name: apt-daily.timer
+    state: restarted

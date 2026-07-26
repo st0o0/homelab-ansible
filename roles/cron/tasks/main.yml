@@ -1,0 +1,42 @@
+- name: Skip if cron disabled
+  ansible.builtin.meta: end_role
+  when: not cron_enabled
+
+- name: Check Docker is installed before scheduling docker prune
+  ansible.builtin.stat:
+    path: /usr/bin/docker
+  register: _cron_docker_bin
+  when: cron_docker_prune
+
+- name: Fail if docker prune cron requested but Docker isn't installed
+  ansible.builtin.assert:
+    that: _cron_docker_bin.stat.exists
+    fail_msg: >-
+      cron_docker_prune is true but Docker isn't installed on this host.
+      Run the docker role first, or set cron_docker_prune: false.
+  when: cron_docker_prune
+
+- name: Docker system prune (weekly)
+  ansible.builtin.cron:
+    name: "docker-system-prune"
+    job: "docker system prune -af --volumes > /dev/null 2>&1"
+    minute: "{{ cron_docker_prune_schedule.split()[0] }}"
+    hour: "{{ cron_docker_prune_schedule.split()[1] }}"
+    day: "{{ cron_docker_prune_schedule.split()[2] }}"
+    month: "{{ cron_docker_prune_schedule.split()[3] }}"
+    weekday: "{{ cron_docker_prune_schedule.split()[4] }}"
+    user: root
+    state: "{{ 'present' if cron_docker_prune else 'absent' }}"
+
+- name: Apply extra cron jobs
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    job: "{{ item.job }}"
+    minute: "{{ item.schedule.split()[0] }}"
+    hour: "{{ item.schedule.split()[1] }}"
+    day: "{{ item.schedule.split()[2] }}"
+    month: "{{ item.schedule.split()[3] }}"
+    weekday: "{{ item.schedule.split()[4] }}"
+    user: "{{ item.user | default('root') }}"
+    state: present
+  loop: "{{ cron_extra_jobs }}"

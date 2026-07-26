@@ -1,0 +1,41 @@
+- name: Skip if dotfiles disabled
+  ansible.builtin.meta: end_role
+  when: not dotfiles_enabled
+
+- name: Check deploy user's home directory exists
+  ansible.builtin.stat:
+    path: "/home/{{ ssh_user }}"
+  register: _dotfiles_home
+
+- name: Fail if deploy user's home directory doesn't exist
+  ansible.builtin.assert:
+    that:
+      - _dotfiles_home.stat.exists
+      - _dotfiles_home.stat.isdir
+    fail_msg: >-
+      /home/{{ ssh_user }} doesn't exist. Run bootstrap.yml (the ssh role)
+      on this host first.
+
+- name: Check if dotfiles are already applied
+  ansible.builtin.stat:
+    path: "/home/{{ ssh_user }}/.local/share/chezmoi/.git"
+  register: _chezmoi_source
+
+- name: Install dotfiles (shell toolchain + chezmoi apply)
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://raw.githubusercontent.com/{{ dotfiles_github_user }}/dotfiles/main/install.sh \
+        | bash -s -- --profile server
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: "{{ ssh_user }}"
+  when: not _chezmoi_source.stat.exists
+
+- name: Update dotfiles (pulls latest + applies, every run)
+  ansible.builtin.command:
+    cmd: chezmoi update --force
+  become: true
+  become_user: "{{ ssh_user }}"
+  changed_when: false
+  when: _chezmoi_source.stat.exists

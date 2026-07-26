@@ -1,0 +1,7 @@
+base_timezone: Europe/Berlin
+base_upgrade: false
+base_packages:
+  - btop
+  - git
+  - curl
+  - ca-certificates

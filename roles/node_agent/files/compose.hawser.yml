@@ -1,0 +1,19 @@
+services:
+  hawser:
+    image: ghcr.io/finsys/hawser:0.2.46
+    container_name: node-agent-hawser
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    environment:
+      - DOCKHAND_SERVER_URL=${DOCKHAND_SERVER_URL}
+      - TOKEN=${DOCKHAND_TOKEN}
+      - AGENT_NAME=${AGENT_NAME}
+      - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL}
+      - TZ=${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /docker:/data/stacks

@@ -1,0 +1,5 @@
+ansible_host: "CHANGEME"
+ansible_user: "CHANGEME"
+node_agent_obs_host: "CHANGEME"
+node_agent_dockhand_url: "http://CHANGEME:9000"
+node_agent_dockhand_token: "CHANGEME"

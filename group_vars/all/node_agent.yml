@@ -1,0 +1,9 @@
+node_agent_deploy_path: /docker/node-agent
+node_agent_scrape_interval: 30s
+node_agent_tz: Europe/Berlin
+node_agent_dockhand_heartbeat: 30
+node_agent_bifrost_peer_allowed_ips: 10.13.13.0/24
+node_agent_bifrost_peer_keepalive: 25
+node_agent_bifrost_peer_preshared_key: ""
+node_agent_bifrost_listen_port: 0
+node_agent_bifrost_mtu: 1420

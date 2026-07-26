@@ -1,0 +1,23 @@
+# Unattended upgrades
+unattended_upgrades_enabled: true
+# unattended_upgrades_blacklist: []
+# unattended_upgrades_skip_reboot_required: false
+# unattended_upgrades_auto_reboot: false
+# unattended_upgrades_auto_reboot_time: "04:00"
+
+# Swap
+# swap_enabled: false
+# swap_size: "2G"
+
+# Firewall (extra rules beyond SSH)
+# ufw_extra_rules:
+#   - { rule: allow, port: 8080, proto: tcp, comment: "Web" }
+
+# Cron
+# cron_docker_prune: true
+# cron_extra_jobs: []
+
+# Node agent
+node_agent_alloy_enabled: false
+node_agent_hawser_enabled: false
+node_agent_bifrost_enabled: false

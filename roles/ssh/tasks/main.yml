@@ -1,0 +1,229 @@
+- name: Install sudo
+  ansible.builtin.apt:
+    name: sudo
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_user_id == 'root'
+
+- name: Create deploy user
+  ansible.builtin.user:
+    name: "{{ ssh_user }}"
+    groups: sudo
+    shell: /bin/bash
+    create_home: true
+  when: ansible_user_id == 'root'
+
+- name: Allow passwordless sudo for deploy user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ ssh_user }}"
+    content: "{{ ssh_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    mode: "0440"
+    validate: visudo -cf %s
+  when: ansible_user_id == 'root'
+
+- name: Check for local backup key
+  ansible.builtin.stat:
+    path: "~/.ssh/id_backup_{{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  register: _ssh_local_backup
+
+- name: Use backup key if bootstrap key was removed # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    ansible_ssh_private_key_file: "~/.ssh/id_backup_{{ inventory_hostname }}"
+  when: _ssh_local_backup.stat.exists
+
+- name: Derive backup public key from local private key
+  ansible.builtin.command:
+    cmd: "ssh-keygen -y -f ~/.ssh/id_backup_{{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  register: _ssh_local_pubkey
+  changed_when: false
+  when: _ssh_local_backup.stat.exists
+
+- name: Set backup public key fact from local file
+  ansible.builtin.set_fact:
+    ssh_backup_public_key: "{{ _ssh_local_pubkey.stdout | trim }}"
+  when: _ssh_local_backup.stat.exists
+
+# Uniform across all hosts (computed independently by each host from
+# hostvars, not via run_once) so the run_once Bitwarden setup tasks below
+# get the same "when" answer regardless of which host they end up
+# running on. Without this, a mix of already-bootstrapped hosts and a
+# new host in the same play could make run_once skip Bitwarden setup
+# entirely if the "wrong" host happens to be picked.
+- name: Determine whether any host still needs Bitwarden bootstrap
+  ansible.builtin.set_fact:
+    _ssh_needs_bitwarden: >-
+      {{ ansible_play_hosts_all
+         | map('extract', hostvars, ['_ssh_local_backup', 'stat', 'exists'])
+         | select('sameas', false)
+         | list
+         | length > 0 }}
+
+- name: Assert BW_SESSION is set
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'BW_SESSION') | length > 0
+    fail_msg: >-
+      BW_SESSION is not set. Run 'export BW_SESSION=$(bw unlock --raw)'
+      before running this playbook.
+  delegate_to: localhost
+  become: false
+  run_once: true
+  when: _ssh_needs_bitwarden
+
+- name: Sync Bitwarden vault
+  ansible.builtin.command:
+    cmd: bw sync
+  delegate_to: localhost
+  become: false
+  environment:
+    BW_SESSION: "{{ lookup('env', 'BW_SESSION') }}"
+  run_once: true
+  changed_when: false
+  check_mode: false
+  when: _ssh_needs_bitwarden
+
+- name: Resolve Bitwarden folder ID (exact name match)
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail
+      && bw list folders --search "{{ ssh_bitwarden_folder }}"
+      | python3 -c "import sys,json; m=[f['id'] for f in json.load(sys.stdin) if f['name'] == '{{ ssh_bitwarden_folder }}']; print(m[0] if m else '')"
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  environment:
+    BW_SESSION: "{{ lookup('env', 'BW_SESSION') }}"
+  register: _ssh_folder_lookup
+  changed_when: false
+  run_once: true
+  when: _ssh_needs_bitwarden
+
+- name: Create Bitwarden folder if it does not exist
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail
+      && echo '{"name":"{{ ssh_bitwarden_folder }}"}' | bw encode | bw create folder
+      | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])"
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  environment:
+    BW_SESSION: "{{ lookup('env', 'BW_SESSION') }}"
+  register: _ssh_new_folder
+  changed_when: true
+  when: _ssh_needs_bitwarden and (_ssh_folder_lookup.stdout | trim | length == 0)
+  run_once: true
+
+- name: Set folder ID fact
+  ansible.builtin.set_fact:
+    _ssh_bw_folder_id: >-
+      {{ (_ssh_folder_lookup.stdout | trim)
+         if (_ssh_folder_lookup.stdout | trim | length > 0)
+         else (_ssh_new_folder.stdout | trim) }}
+  run_once: true
+  when: _ssh_needs_bitwarden
+
+- name: Broadcast folder ID fact to all hosts in play
+  ansible.builtin.set_fact:
+    _ssh_bw_folder_id: "{{ _ssh_bw_folder_id }}"
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: "{{ ansible_play_hosts }}"
+  run_once: true
+  when: _ssh_needs_bitwarden
+
+- name: Look up existing backup key in Bitwarden
+  ansible.builtin.command:
+    cmd: bw get item "ssh-backup-{{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  environment:
+    BW_SESSION: "{{ lookup('env', 'BW_SESSION') }}"
+  register: _ssh_bw_lookup
+  failed_when: false
+  changed_when: false
+  no_log: true
+  check_mode: false
+  when: not _ssh_local_backup.stat.exists
+
+- name: Generate new backup key
+  ansible.builtin.include_tasks: generate_key.yml
+  when: not _ssh_local_backup.stat.exists and _ssh_bw_lookup.rc != 0
+
+- name: Fetch existing backup key
+  ansible.builtin.include_tasks: fetch_key.yml
+  when: not _ssh_local_backup.stat.exists and _ssh_bw_lookup.rc == 0
+
+- name: Build complete key list
+  ansible.builtin.set_fact:
+    _ssh_all: >-
+      {{ ssh_yubikey_public_keys
+         + ssh_extra_public_keys
+         + [ssh_backup_public_key] }}
+
+- name: Save backup private key locally for future Ansible runs
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail
+      && bw get item "ssh-backup-{{ inventory_hostname }}"
+      | python3 -c "import sys,json; print(json.load(sys.stdin)['sshKey']['privateKey'], end='')"
+      > ~/.ssh/id_backup_{{ inventory_hostname }}
+      && chmod 600 ~/.ssh/id_backup_{{ inventory_hostname }}
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  environment:
+    BW_SESSION: "{{ lookup('env', 'BW_SESSION') }}"
+  no_log: true
+  changed_when: true
+  when: not _ssh_local_backup.stat.exists
+
+- name: Write SSH config entry for this host
+  ansible.builtin.blockinfile:
+    path: ~/.ssh/config
+    create: true
+    mode: "0600"
+    marker: "# {mark} ANSIBLE MANAGED - {{ inventory_hostname }}"
+    block: |
+      Host {{ inventory_hostname }} {{ ansible_host }}
+          HostName {{ ansible_host }}
+          User {{ ssh_user }}
+          IdentityFile ~/.ssh/id_backup_{{ inventory_hostname }}
+  delegate_to: localhost
+  become: false
+
+- name: Deploy authorized keys
+  ansible.posix.authorized_key:
+    user: "{{ ssh_user }}"
+    key: "{{ item }}"
+    path: "/home/{{ ssh_user }}/.ssh/authorized_keys"
+    manage_dir: true
+    exclusive: "{{ ssh_exclusive and ansible_loop.first }}"
+    state: present
+  loop: "{{ _ssh_all }}"
+  loop_control:
+    extended: true
+
+- name: Deploy sshd hardening config
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-ansible-hardening.conf
+    content: |
+      # Managed by Ansible -- do not edit manually.
+      PermitRootLogin no
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+    mode: "0644"
+  become: true
+  notify: Restart sshd

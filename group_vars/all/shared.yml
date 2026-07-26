@@ -1,0 +1,6 @@
+# Shared feature toggles — override per host in host_vars/<host>/vars.yml
+
+# UPS monitoring (NUT client)
+# ups_enabled: false
+# ups_mode: netclient
+# ups_name: ups

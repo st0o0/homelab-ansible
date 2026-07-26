@@ -1,0 +1,10 @@
+- name: Restart node-agent stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_agent_deploy_path }}"
+    files: >-
+      {{ ['compose.yml']
+         + (['compose.alloy.yml'] if node_agent_alloy_enabled else [])
+         + (['compose.hawser.yml'] if node_agent_hawser_enabled else [])
+         + (['compose.bifrost.yml'] if node_agent_bifrost_enabled else []) }}
+    state: present
+    recreate: always

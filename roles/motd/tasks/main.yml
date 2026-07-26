@@ -1,0 +1,49 @@
+- name: Skip if motd disabled
+  ansible.builtin.meta: end_role
+  when: not motd_enabled
+
+- name: Clear default motd
+  ansible.builtin.copy:
+    dest: /etc/motd
+    content: ""
+    mode: "0644"
+
+- name: Remove default motd scripts
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/update-motd.d/10-uname
+    - /etc/update-motd.d/10-sysinfo
+    - /etc/update-motd.d/50-motd-news
+    - /etc/update-motd.d/90-updates-available
+    - /etc/update-motd.d/91-release-upgrade
+    - /etc/update-motd.d/92-unattended-upgrades
+    - /etc/update-motd.d/10-homelab # superseded by /usr/local/sbin/homelab-motd
+  failed_when: false
+
+- name: Deploy custom motd script
+  ansible.builtin.template:
+    src: motd.sh.j2
+    dest: /usr/local/sbin/homelab-motd
+    mode: "0755"
+
+# PAM's dynamic motd only fires for SSH sessions the client requests as a
+# plain interactive login (no explicit remote command). Kitty's ssh kitten
+# (and similar wrappers) connect via a bootstrap command instead, so PAM
+# silently skips the banner there. Printing it from the shell itself avoids
+# depending on how the client happened to connect.
+- name: Disable PAM dynamic motd (avoid double banner with the bashrc hook)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: '^(\s*session\s+optional\s+pam_motd\.so)'
+    state: absent
+
+- name: Print homelab-motd from every interactive bash shell
+  ansible.builtin.blockinfile:
+    path: /etc/bash.bashrc
+    marker: "# {mark} ANSIBLE MANAGED - homelab motd"
+    block: |
+      if [ -n "$SSH_CONNECTION" ] && [[ $- == *i* ]]; then
+          /usr/local/sbin/homelab-motd
+      fi

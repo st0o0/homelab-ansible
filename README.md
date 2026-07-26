@@ -1,8 +1,8 @@
-# Ansible — Homelab Server Provisioning
+# homelab-ansible
 
 Takes a fresh Debian server (IP + user + password) and makes it production-ready: SSH hardened, Docker installed, monitoring agent running, visible in Dockhand. Everything runs from the DevContainer — no local tool installation needed.
 
-**Ansible provisions servers. [Dockhand](../README.md) manages what runs on them.**
+**Ansible provisions servers. [homelab-catalog](https://github.com/st0o0/homelab-catalog) manages what runs on them.**
 
 ## First-Time Setup
 
@@ -21,7 +21,6 @@ This sets `BW_SESSION` for the current shell. Required for SSH key management an
 ### 3. Initialize SOPS encryption
 
 ```bash
-cd ansible
 just init
 ```
 
@@ -168,7 +167,14 @@ just deploy myserver --check -v   # verbose dry run for one host
 ## Directory Structure
 
 ```
-ansible/
+homelab-ansible/
+  .devcontainer/                 # DevContainer configs (linux/windows)
+  .github/workflows/             # CI (ansible-lint + syntax-check)
+  scripts/
+    install-dependencies.sh      # postCreateCommand: Ansible + infra tools
+    init-secrets.sh              # First-time SOPS/age setup
+    update-dotfiles.sh           # postStartCommand: chezmoi update
+
   ansible.cfg                    # Ansible settings (inventory, key, SOPS plugin)
   justfile                       # All commands — run 'just --list' to see them
   .sops.yaml                    # SOPS encryption rules (age public key)
@@ -195,6 +201,7 @@ ansible/
     docker/                     # Docker CE from official repo
     cron/                       # Scheduled tasks (docker prune, custom jobs)
     motd/                       # Colored login banner with system info
+    dotfiles/                   # Shell toolchain via dotfiles repo
     ssh/                        # SSH key management + sshd hardening
     node_agent/                 # Alloy + Hawser + optional Bifrost
 ```
@@ -431,8 +438,8 @@ winget install -e --id DEVCOM.JetBrainsMonoNerdFont
 
 ### Persistent storage
 
-- **SSH keys** — Docker volume `homelab-catalog-ssh`, survives rebuilds
-- **SOPS age key** — Docker volume `homelab-catalog-sops`, survives rebuilds
+- **SSH keys** — Docker volume `homelab-ansible-ssh`, survives rebuilds
+- **SOPS age key** — Docker volume `homelab-ansible-sops`, survives rebuilds
 
 ---
 
