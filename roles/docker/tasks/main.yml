@@ -66,6 +66,6 @@
     append: true
   register: _docker_group
 
-- name: Reset SSH connection so new group membership takes effect
+- name: Reset SSH connection so new group membership takes effect # noqa: no-handler
   ansible.builtin.meta: reset_connection
   when: _docker_group.changed

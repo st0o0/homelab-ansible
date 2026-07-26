@@ -1,2 +1,7 @@
 ---
-skip_list: []
+exclude_paths:
+  - group_vars/all/secret.sops.yml
+  - host_vars/*/secret.sops.yml
+
+skip_list:
+  - yaml[line-length]
