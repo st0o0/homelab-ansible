@@ -12,40 +12,43 @@ SUBTEXT='\e[38;2;166;173;200m'
 OVERLAY='\e[38;2;108;112;134m'
 BOLD='\e[1m'
 
-# ── Fast data gathering (no docker yet) ─────────────────────────────
+# ── Data gathering ──────────────────────────────────────────────────
 HOSTNAME=$(hostname)
 KERNEL=$(uname -r)
 OS=$(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME" || uname -o)
 
-# Compact uptime from /proc (avoids slow `uptime -p`)
+# Uptime — compact, from /proc
 UP_SEC=$(cut -d. -f1 /proc/uptime)
-UP_D=$((UP_SEC / 86400))
-UP_H=$(( (UP_SEC % 86400) / 3600 ))
-UP_M=$(( (UP_SEC % 3600) / 60 ))
+UP_D=$((UP_SEC / 86400)); UP_H=$(( (UP_SEC % 86400) / 3600 )); UP_M=$(( (UP_SEC % 3600) / 60 ))
 if [ "$UP_D" -gt 0 ]; then UPTIME="${UP_D}d ${UP_H}h"
 elif [ "$UP_H" -gt 0 ]; then UPTIME="${UP_H}h ${UP_M}m"
 else UPTIME="${UP_M}m"; fi
 
+# CPU
 CPU_CORES=$(nproc)
 CPU_TEMP=""
 [ -f /sys/class/thermal/thermal_zone0/temp ] && CPU_TEMP="$(( $(cat /sys/class/thermal/thermal_zone0/temp) / 1000 ))"
 
+# Load
+LOAD_1M=$(cut -d' ' -f1 /proc/loadavg)
+
+# Memory
 MEM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
-MEM_USED=$(free -h | awk '/^Mem:/{print $3}')
 MEM_TOTAL=$(free -h | awk '/^Mem:/{print $2}')
 
+# Disk
 DISK_PCT=$(df / | awk 'NR==2{gsub(/%/,""); print $5}')
 DISK_USED=$(df -h / | awk 'NR==2{print $3}')
 DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
 
-# Docker — single fast command in background (Armbian style)
+# Docker — background (Armbian style: names as comma list)
 DOCKER_TMP=$(mktemp)
 if command -v docker &>/dev/null; then
     docker ps --format '{{.Names}}' 2>/dev/null | sort | paste -sd', ' - > "$DOCKER_TMP" &
     DOCKER_PID=$!
 fi
 
-# Network — classify from ip addr (instant, no docker needed)
+# Network — classify from ip addr (instant)
 LAN="" WG="" IPV6=""
 while IFS= read -r line; do
     iface=$(echo "$line" | awk '{print $NF}')
@@ -55,81 +58,69 @@ while IFS= read -r line; do
     elif echo "$iface" | grep -qiE '^wg' || echo "$addr" | grep -qE '^10\.0\.101\.'; then
         WG="${WG:+$WG, }$addr"
     elif echo "$addr" | grep -qE '^172\.(1[6-9]|2[0-9]|3[01])\.'; then
-        : # skip docker bridges
+        :
     elif echo "$addr" | grep -qE '^(10\.|192\.168\.)'; then
         LAN="${LAN:+$LAN, }$addr"
     fi
 done < <(ip -o addr show 2>/dev/null | grep -v ' lo ' | awk '/inet6? /{print}')
 
-# ── Helpers ──────────────────────────────────────────────────────────
-bar() {
-    local pct=$1 color
-    local filled=$(( pct / 10 ))
-    local empty=$(( 10 - filled ))
-    if [ "$pct" -ge 85 ]; then color="$RED"
-    elif [ "$pct" -ge 60 ]; then color="$YELLOW"
-    else color="$GREEN"; fi
-    local out="${color}"
-    for ((i=0; i<filled; i++)); do out+="█"; done
-    out+="${OVERLAY}"
-    for ((i=0; i<empty; i++)); do out+="░"; done
-    out+="${R}"
-    echo -ne "$out"
+# ── Helpers ─────────────────────────────────────────────────────────
+# Armbian-style two-column row: "  Label:  value\tLabel:  value\n"
+# Color value green normally, red when over threshold
+row() {
+    local l1="$1" v1="$2" t1="${3:-}" l2="${4:-}" v2="${5:-}" t2="${6:-}"
+    local c1="$GREEN" c2="$GREEN"
+    [ -n "$t1" ] && [ "$v1" -ge "$t1" ] 2>/dev/null && c1="$RED"
+    [ -n "$t2" ] && [ "$v2" -ge "$t2" ] 2>/dev/null && c2="$RED"
+    printf "  ${SUBTEXT}%-14s${R}${c1}%s${R}" "$l1" "$v1"
+    if [ -n "$l2" ]; then
+        printf "\t${SUBTEXT}%-10s${R}${c2}%s${R}" "$l2" "$v2"
+    fi
+    printf "\n"
 }
 
 hdr() {
-    local label="$1" right="${2:-}"
-    local w=55 pre="─── " dashes=""
-    if [ -n "$right" ]; then
-        local suf=" ${right} ───"
-        local n=$(( w - ${#pre} - ${#label} - 1 - ${#suf} ))
-        [ "$n" -lt 3 ] && n=3
-        printf -v dashes '%*s' "$n" ''; dashes="${dashes// /─}"
-        echo -e "${MAUVE}${pre}${label} ${dashes}${OVERLAY}${suf}${R}"
-    else
-        local n=$(( w - ${#pre} - ${#label} - 1 ))
-        [ "$n" -lt 3 ] && n=3
-        printf -v dashes '%*s' "$n" ''; dashes="${dashes// /─}"
-        echo -e "${MAUVE}${pre}${label} ${dashes}${R}"
-    fi
+    local label="$1" w=55 pre="─── " dashes=""
+    local n=$(( w - ${#pre} - ${#label} - 1 ))
+    [ "$n" -lt 3 ] && n=3
+    printf -v dashes '%*s' "$n" ''; dashes="${dashes// /─}"
+    echo -e "${MAUVE}${pre}${label} ${dashes}${R}"
 }
 
-# ── Output ───────────────────────────────────────────────────────────
+# ── Banner ──────────────────────────────────────────────────────────
 BANNER=$(figlet -f small "$HOSTNAME" 2>/dev/null || echo " $HOSTNAME")
 echo ""
 echo -e "${MAUVE}${BOLD}${BANNER}${R}"
 echo -e " ${SUBTEXT}${OS} · ${KERNEL}${R}"
 
-# System
+# ── Info (Armbian-style label: value pairs) ─────────────────────────
 echo ""
-hdr "󰒋 System"
-CPU_INFO="${CPU_CORES} cores"
-[ -n "$CPU_TEMP" ] && CPU_INFO+=" · ${CPU_TEMP}°C"
-printf "  ${GREEN}%-10s${R}${SUBTEXT}%-24s${R}${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "uptime" "$UPTIME" "cpu" "$CPU_INFO"
-MEM_BAR=$(bar "$MEM_PCT")
-printf "  ${GREEN}%-10s${R}${MEM_BAR} ${SUBTEXT}%3s%%${R}  ${OVERLAY}%s / %s${R}\n" "memory" "$MEM_PCT" "$MEM_USED" "$MEM_TOTAL"
-DISK_BAR=$(bar "$DISK_PCT")
-printf "  ${GREEN}%-10s${R}${DISK_BAR} ${SUBTEXT}%3s%%${R}  ${OVERLAY}%s / %s${R}\n" "disk /" "$DISK_PCT" "$DISK_USED" "$DISK_TOTAL"
 
-# Network — only show if there's something meaningful
-if [ -n "$LAN" ] || [ -n "$WG" ] || [ -n "$IPV6" ]; then
-    echo ""
-    hdr "󰛳 Network"
-    [ -n "$LAN" ]  && printf "  ${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "lan" "$LAN"
-    [ -n "$WG" ]   && printf "  ${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "wg" "$WG"
-    [ -n "$IPV6" ] && printf "  ${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "ipv6" "$IPV6"
-fi
+# Network
+[ -n "$LAN" ]  && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "IPv4:" "$LAN"
+[ -n "$WG" ]   && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "WireGuard:" "$WG"
+[ -n "$IPV6" ] && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "IPv6:" "$IPV6"
 
-# Containers — wait for background docker ps, display as comma list
+# Containers — wait for background docker
 if [ -n "${DOCKER_PID:-}" ]; then
     wait "$DOCKER_PID" 2>/dev/null
     CONTAINER_LIST=$(<"$DOCKER_TMP")
-    if [ -n "$CONTAINER_LIST" ]; then
-        echo ""
-        printf "  ${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "containers" "$CONTAINER_LIST"
-    fi
+    [ -n "$CONTAINER_LIST" ] && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "Containers:" "$CONTAINER_LIST"
 fi
 rm -f "$DOCKER_TMP"
+
+# Performance header
+echo ""
+hdr "Performance"
+echo ""
+
+row "Uptime:" "$UPTIME" "" "Load:" "$LOAD_1M"
+
+CPU_LINE="${CPU_CORES} cores"
+[ -n "$CPU_TEMP" ] && CPU_LINE="${CPU_LINE}, ${CPU_TEMP}°C"
+row "CPU:" "$CPU_LINE" "" "Memory:" "${MEM_PCT}% of ${MEM_TOTAL}" "85"
+
+row "Disk /:" "${DISK_PCT}% of ${DISK_TOTAL}" "85" "Usage:" "${DISK_USED} / ${DISK_TOTAL}"
 
 # Storage (only if >1 mount)
 declare -a ST_N=() ST_P=() ST_U=() ST_T=()
@@ -146,17 +137,17 @@ done < <(df -h --output=source,size,used,avail,pcent,target 2>/dev/null \
 
 if [ "${#ST_N[@]}" -gt 1 ]; then
     echo ""
-    hdr "󰋊 Storage"
+    hdr "Storage"
+    echo ""
     for ((i=0; i<${#ST_N[@]}; i++)); do
-        ST_BAR=$(bar "${ST_P[$i]}")
-        printf "  ${GREEN}%-10s${R}${ST_BAR} ${SUBTEXT}%3s%%${R}  ${OVERLAY}%s / %s${R}\n" \
-            "${ST_N[$i]}" "${ST_P[$i]}" "${ST_U[$i]}" "${ST_T[$i]}"
+        row "${ST_N[$i]}:" "${ST_P[$i]}% of ${ST_T[$i]}" "85" "Usage:" "${ST_U[$i]} / ${ST_T[$i]}"
     done
 fi
 
-# Aliases — compact, one line per group
+# Aliases
 echo ""
-hdr "󰘳 Aliases"
+hdr "Aliases"
+echo ""
 echo -e "  ${GREEN}dc${R}${OVERLAY}·${R}${GREEN}dcu${R}${OVERLAY}·${R}${GREEN}dcd${R}${OVERLAY}·${R}${GREEN}dcr${R}${OVERLAY}·${R}${GREEN}dcl${R}${OVERLAY}·${R}${GREEN}dcp${R}  ${OVERLAY}compose up/down/restart/logs/pull${R}"
 echo -e "  ${GREEN}dps${R}${OVERLAY}·${R}${GREEN}dprune${R}${OVERLAY}·${R}${GREEN}dbackup${R}${OVERLAY}·${R}${GREEN}drestore${R}  ${OVERLAY}ps/prune/backup/restore${R}"
 echo -e "  ${GREEN}cdd${R} ${OVERLAY}<stack>${R}          ${OVERLAY}cd /docker/<stack>${R}"
