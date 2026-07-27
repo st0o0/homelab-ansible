@@ -1,107 +1,173 @@
 {% raw %}#!/bin/bash
 # Managed by Ansible -- do not edit manually.
 
-# Colors (avoid hardcoded white/black — they invert badly on light-background
-# terminals; bold/dim adapt to whatever fg the terminal theme defines)
+# ── Catppuccin Mocha palette (true-color) ────────────────────────────
 R='\e[0m'
-G='\e[1;32m'
-C='\e[1;36m'
-Y='\e[1;33m'
-RED='\e[1;31m'
-W='\e[1m'
-D='\e[2m'
+MAUVE='\e[38;2;203;166;247m'
+BLUE='\e[38;2;137;180;250m'
+GREEN='\e[38;2;166;227;161m'
+PEACH='\e[38;2;250;179;135m'
+RED='\e[38;2;243;139;168m'
+YELLOW='\e[38;2;249;226;175m'
+SUBTEXT='\e[38;2;166;173;200m'
+OVERLAY='\e[38;2;108;112;134m'
+BOLD='\e[1m'
 
-# System info
+# ── Data gathering ───────────────────────────────────────────────────
 HOSTNAME=$(hostname)
 KERNEL=$(uname -r)
 OS=$(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME" || uname -o)
-PKGS=$(dpkg -l 2>/dev/null | grep -c '^ii' || echo "?")
-IP_ALL=$(hostname -I | xargs | sed 's/ /, /g')
 UPTIME=$(uptime -p | sed 's/up //')
 
-# Performance
-LOAD_PCT=$(awk '{printf "%.0f", $1 * 100 / '"$(nproc)"'}' /proc/loadavg)
-MEM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
-MEM_TOTAL=$(free -h | awk '/^Mem:/{print $2}')
-DISK_PCT=$(df / | awk 'NR==2{gsub(/%/,""); print $5}')
-DISK_USED=$(df -h / | awk 'NR==2{print $3}')
-DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
-
 # CPU
-CPU_MODEL=$(awk -F: '/model name/{print $2; exit}' /proc/cpuinfo | sed 's/^ *//')
-[ -z "$CPU_MODEL" ] && CPU_MODEL=$(awk -F: '/^model|Hardware/{print $2; exit}' /proc/cpuinfo | sed 's/^ *//')
 CPU_CORES=$(nproc)
 CPU_TEMP=""
 if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
     RAW=$(cat /sys/class/thermal/thermal_zone0/temp)
-    CPU_TEMP="$((RAW / 1000))°C"
-fi
-CPU_LINE="${CPU_MODEL:-unknown} (${CPU_CORES} cores)"
-[ -n "$CPU_TEMP" ] && CPU_LINE="${CPU_LINE}, ${CPU_TEMP}"
-
-# Docker containers
-DOCKER_LINE=""
-if command -v docker &>/dev/null; then
-    NAMES=$(docker ps --format '{{.Names}}' 2>/dev/null | sort | paste -sd', ' -)
-    COUNT=$(docker ps -q 2>/dev/null | wc -l)
-    [ "$COUNT" -gt 0 ] && DOCKER_LINE=" ${W}Containers:${R}   ${NAMES}"
+    CPU_TEMP="$((RAW / 1000))"
 fi
 
-# Config tool (OS-specific, first match wins)
-CONFIG_CMD=""
-command -v armbian-config &>/dev/null && CONFIG_CMD="armbian-config"
-[ -z "$CONFIG_CMD" ] && command -v raspi-config &>/dev/null && CONFIG_CMD="raspi-config"
-[ -z "$CONFIG_CMD" ] && command -v nmtui &>/dev/null && CONFIG_CMD="nmtui"
+# Memory
+MEM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
+MEM_USED=$(free -h | awk '/^Mem:/{print $3}')
+MEM_TOTAL=$(free -h | awk '/^Mem:/{print $2}')
 
-# Monitoring tool (first available wins)
-MONITOR_CMD=""
-command -v btop &>/dev/null && MONITOR_CMD="btop"
-[ -z "$MONITOR_CMD" ] && command -v htop &>/dev/null && MONITOR_CMD="htop"
-[ -z "$MONITOR_CMD" ] && command -v top &>/dev/null && MONITOR_CMD="top"
+# Disk /
+DISK_PCT=$(df / | awk 'NR==2{gsub(/%/,""); print $5}')
+DISK_USED=$(df -h / | awk 'NR==2{print $3}')
+DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
 
-# Color for percentage
-cpc() {
-    [ "$1" -ge 85 ] && echo -ne "${RED}" && return
-    [ "$1" -ge 60 ] && echo -ne "${Y}" && return
-    echo -ne "${G}"
+# ── Helper: percentage bar (10 segments) ─────────────────────────────
+# Usage: bar <percent>
+# Outputs colored ▰▱ bar with no trailing reset
+bar() {
+    local pct=$1 filled=$(( pct / 10 )) empty color
+    empty=$(( 10 - filled ))
+    if [ "$pct" -ge 85 ]; then color="$RED"
+    elif [ "$pct" -ge 60 ]; then color="$YELLOW"
+    else color="$GREEN"; fi
+    local out="${color}"
+    for ((i=0; i<filled; i++)); do out+="▰"; done
+    out+="${OVERLAY}"
+    for ((i=0; i<empty; i++)); do out+="▱"; done
+    out+="${R}"
+    echo -ne "$out"
 }
 
-# Two-column row: label1 value1 label2 value2 (col1 fixed at 34 visible chars)
-row2() {
-    local l1="$1" v1="$2" l2="$3" v2="$4"
-    local col1
-    col1=$(printf "  %b%-14s%b%b" "$W" "$l1" "$R" "$v1")
-    # pad col1 to a fixed visible width (34 chars) ignoring ANSI escapes
-    local visible
-    visible=$(echo -e "$col1" | sed 's/\x1b\[[0-9;]*m//g')
-    local pad=$((34 - ${#visible}))
-    [ "$pad" -lt 1 ] && pad=1
-    printf "%b" "$col1"
-    printf "%${pad}s" ""
-    [ -n "$l2" ] && printf "%b%-9s%b%b\n" "$W" "$l2" "$R" "$v2" || printf "\n"
+# ── Helper: section header ───────────────────────────────────────────
+# Usage: section_header "ICON Label" [right_text]
+section_header() {
+    local label="$1" right="$2"
+    local total_width=55
+    local prefix="─── "
+    local suffix=""
+    if [ -n "$right" ]; then
+        # right text with surrounding spaces and trailing ───
+        suffix=" ${right} ───"
+        local label_len=${#label}
+        local suffix_visible=${#suffix}
+        local fill=$(( total_width - ${#prefix} - label_len - 1 - suffix_visible ))
+        [ "$fill" -lt 3 ] && fill=3
+        local dashes=""
+        for ((i=0; i<fill; i++)); do dashes+="─"; done
+        echo -e "${MAUVE}${prefix}${label} ${dashes}${OVERLAY}${suffix}${R}"
+    else
+        local label_len=${#label}
+        local fill=$(( total_width - ${#prefix} - label_len - 1 ))
+        [ "$fill" -lt 3 ] && fill=3
+        local dashes=""
+        for ((i=0; i<fill; i++)); do dashes+="─"; done
+        echo -e "${MAUVE}${prefix}${label} ${dashes}${R}"
+    fi
 }
 
-# Header
+# ── Banner ───────────────────────────────────────────────────────────
 BANNER=$(figlet -f small "$HOSTNAME" 2>/dev/null || echo " $HOSTNAME")
 echo ""
-echo -e "${C}${BANNER}${R}"
-echo -e " ${G}${OS}${R}"
+echo -e "${MAUVE}${BOLD}${BANNER}${R}"
+echo -e " ${SUBTEXT}${OS} · ${KERNEL}${R}"
 echo ""
-echo -e " ${W}Kernel:${R}       ${KERNEL}"
-echo -e " ${W}Packages:${R}     ${PKGS}"
-echo -e " ${W}IPv4:${R}         ${IP_ALL}"
-[ -n "$DOCKER_LINE" ] && echo -e "$DOCKER_LINE"
 
-# Performance
+# ── System ───────────────────────────────────────────────────────────
+section_header "󰒋 System"
 echo ""
-echo -e " ${C}Performance:${R}"
+# Row 1: uptime + cpu
+CPU_INFO="${CPU_CORES} cores"
+[ -n "$CPU_TEMP" ] && CPU_INFO+=" · ${CPU_TEMP}°C"
+printf "  ${GREEN}uptime${R}    %-22s ${GREEN}cpu${R}       %s\n" "$UPTIME" "$CPU_INFO"
+# Row 2: memory with bar
+MEM_BAR=$(bar "$MEM_PCT")
+printf "  ${GREEN}memory${R}    ${MEM_BAR} ${SUBTEXT}%3s%%${R}  ${OVERLAY}%s / %s${R}\n" "$MEM_PCT" "$MEM_USED" "$MEM_TOTAL"
+# Row 3: disk / with bar
+DISK_BAR=$(bar "$DISK_PCT")
+printf "  ${GREEN}disk /${R}    ${DISK_BAR} ${SUBTEXT}%3s%%${R}  ${OVERLAY}%s / %s${R}\n" "$DISK_PCT" "$DISK_USED" "$DISK_TOTAL"
 echo ""
-row2 "Uptime:" "${UPTIME}" "" ""
-row2 "CPU:" "${CPU_LINE}" "" ""
-row2 "Load:" "$(cpc $LOAD_PCT)${LOAD_PCT}%${R}" "Memory:" "$(cpc $MEM_PCT)${MEM_PCT}%${R} of ${MEM_TOTAL}"
-row2 "Disk /:" "$(cpc $DISK_PCT)${DISK_PCT}%${R} of ${DISK_TOTAL}" "Usage:" "${DISK_USED} / ${DISK_TOTAL}"
 
-# Storage (real mounts, one per line)
+# ── Network ──────────────────────────────────────────────────────────
+# Classify IPs
+declare -a NET_LAN=() NET_WG=() NET_IPV6=() DOCKER_NETS=()
+
+# Get all IPs from ip addr
+while IFS= read -r line; do
+    iface=$(echo "$line" | awk '{print $NF}')
+    addr=$(echo "$line" | awk '{gsub(/\/.*/, "", $2); print $2}')
+    # IPv6
+    if echo "$addr" | grep -qE '^(fd|fe80)'; then
+        NET_IPV6+=("$addr")
+    # WireGuard: interface name starts with wg or IP in 10.0.101.x
+    elif echo "$iface" | grep -qiE '^wg' || echo "$addr" | grep -qE '^10\.0\.101\.'; then
+        NET_WG+=("$addr")
+    # Docker bridge (172.x)
+    elif echo "$addr" | grep -qE '^172\.(1[6-9]|2[0-9]|3[01])\.'; then
+        DOCKER_NETS+=("$addr")
+    # LAN (10.x, 192.168.x, or other private)
+    elif echo "$addr" | grep -qE '^(10\.|192\.168\.)'; then
+        NET_LAN+=("$addr")
+    fi
+done < <(ip -o addr show 2>/dev/null | grep -v ' lo ' | awk '/inet6? /{print}')
+
+DOCKER_NET_COUNT=${#DOCKER_NETS[@]}
+# Also count docker bridge networks if docker is available
+if command -v docker &>/dev/null; then
+    DOCKER_NET_COUNT=$(docker network ls --filter driver=bridge --format '{{.Name}}' 2>/dev/null | wc -l)
+fi
+
+section_header "󰛳 Network"
+echo ""
+for ip in "${NET_LAN[@]}"; do
+    printf "  ${GREEN}lan${R}       ${SUBTEXT}%s${R}\n" "$ip"
+done
+for ip in "${NET_WG[@]}"; do
+    printf "  ${GREEN}wg${R}        ${SUBTEXT}%s${R}\n" "$ip"
+done
+for ip in "${NET_IPV6[@]}"; do
+    printf "  ${GREEN}ipv6${R}      ${SUBTEXT}%s${R}\n" "$ip"
+done
+[ "$DOCKER_NET_COUNT" -gt 0 ] && printf "  ${GREEN}docker${R}    ${SUBTEXT}%s bridge networks${R}\n" "$DOCKER_NET_COUNT"
+echo ""
+
+# ── Containers ───────────────────────────────────────────────────────
+if command -v docker &>/dev/null; then
+    mapfile -t CONTAINERS < <(docker ps --format '{{.Names}}' 2>/dev/null | sort)
+    CONTAINER_COUNT=${#CONTAINERS[@]}
+    if [ "$CONTAINER_COUNT" -gt 0 ]; then
+        section_header "󰡨 Containers" "${CONTAINER_COUNT} running"
+        echo ""
+        # Grid layout: 4 columns
+        COL_WIDTH=20
+        col=0
+        for name in "${CONTAINERS[@]}"; do
+            if [ $col -eq 0 ]; then printf "  "; fi
+            printf "${GREEN}●${R} ${SUBTEXT}%-$((COL_WIDTH - 2))s${R}" "$name"
+            col=$(( (col + 1) % 4 ))
+            [ $col -eq 0 ] && printf "\n"
+        done
+        [ $col -ne 0 ] && printf "\n"
+        echo ""
+    fi
+fi
+
+# ── Storage (only if >1 mount) ───────────────────────────────────────
 declare -a ST_N=() ST_P=() ST_U=() ST_T=()
 while IFS= read -r line; do
     m=$(echo "$line" | awk '{print $6}')
@@ -117,42 +183,45 @@ done < <(df -h --output=source,size,used,avail,pcent,target 2>/dev/null \
 
 ST_COUNT=${#ST_N[@]}
 if [ "$ST_COUNT" -gt 1 ]; then
-    echo ""
-    echo -e " ${C}Storage:${R}"
+    section_header "󰋊 Storage"
     echo ""
     for ((i=0; i<ST_COUNT; i++)); do
-        # Pad name to 14 chars
-        PADDED=$(printf "%-14s" "${ST_N[$i]}")
-        echo -e "  ${D}${PADDED}${R}  $(cpc ${ST_P[$i]})${ST_P[$i]}%${R}\tof ${ST_T[$i]}\t(${ST_U[$i]} used)"
+        ST_BAR=$(bar "${ST_P[$i]}")
+        printf "  ${GREEN}%-10s${R}${ST_BAR} ${SUBTEXT}%3s%%${R}  ${OVERLAY}%s / %s${R}\n" \
+            "${ST_N[$i]}" "${ST_P[$i]}" "${ST_U[$i]}" "${ST_T[$i]}"
     done
-fi
-
-echo ""
-if [ -n "$CONFIG_CMD" ] || [ -n "$MONITOR_CMD" ]; then
-    echo -e " ${C}Commands:${R}"
-    echo ""
-    [ -n "$CONFIG_CMD" ] && echo -e "  Configuration: ${G}${CONFIG_CMD}${R}"
-    [ -n "$MONITOR_CMD" ] && echo -e "  Monitoring:    ${G}${MONITOR_CMD}${R}"
     echo ""
 fi
 
-# Aliases (from dotfiles' dot_bash_aliases.d/ — keep in sync manually,
-# this repo doesn't depend on the dotfiles one)
-echo -e " ${C}Aliases:${R}"
+# ── Aliases ──────────────────────────────────────────────────────────
+section_header "󰘳 Aliases"
 echo ""
-echo -e "  ${G}clh${R}                 clear shell history"
-echo -e "  ${G}update${R} / ${G}upgradable${R}   apt update && upgrade / list pending"
-echo -e "  ${G}dc${R} / ${G}dcu${R} / ${G}dcd${R} / ${G}dcl${R}   docker compose up|down|logs -f"
-echo -e "  ${G}dps${R} / ${G}dprune${R}       docker ps / system prune"
-echo -e "  ${G}dbackup${R} / ${G}drestore${R} backup / restore docker volumes"
-echo -e "  ${G}cdd${R}                 cd into a container's compose dir"
+echo -e "  ${BLUE}compose${R}"
+echo -e "  ${GREEN}dc${R}                ${OVERLAY}docker compose${R}"
+echo -e "  ${GREEN}dcu${R} · ${GREEN}dcd${R} · ${GREEN}dcr${R}   ${OVERLAY}up -d · down · restart${R}"
+echo -e "  ${GREEN}dcl${R} · ${GREEN}dcp${R}         ${OVERLAY}logs -f · pull${R}"
+echo ""
+echo -e "  ${BLUE}containers${R}"
+echo -e "  ${GREEN}dps${R}               ${OVERLAY}ps formatted${R}"
+echo -e "  ${GREEN}dprune${R}            ${OVERLAY}system prune${R}"
+echo -e "  ${GREEN}dbackup${R}·${GREEN}drestore${R}  ${OVERLAY}volume backup · restore${R}"
+echo ""
+echo -e "  ${BLUE}navigation${R}"
+echo -e "  ${GREEN}cdd${R} ${OVERLAY}<stack>${R}       ${OVERLAY}cd /docker/<stack>${R}"
+echo ""
+echo -e "  ${BLUE}general${R}"
+echo -e "  ${GREEN}update${R}            ${OVERLAY}apt update && upgrade${R}"
+echo -e "  ${GREEN}upgradable${R}        ${OVERLAY}list pending updates${R}"
+echo -e "  ${GREEN}clh${R}               ${OVERLAY}clear shell history${R}"
+echo -e "  ${GREEN}tidy${R}              ${OVERLAY}remove stale home files${R}"
+echo -e "  ${GREEN}reload${R}            ${OVERLAY}restart gpg-agent${R}"
 echo ""
 
-# Last login
+# ── Last login ───────────────────────────────────────────────────────
 LAST=$(last -1 -R "$USER" 2>/dev/null | head -1)
 if [ -n "$LAST" ] && ! echo "$LAST" | grep -q "^$"; then
     LOGIN_TIME=$(echo "$LAST" | awk '{for(i=3;i<=NF;i++) printf "%s ", $i}' | xargs)
-    echo -e " ${D}Last login: ${LOGIN_TIME}${R}"
+    echo -e " ${OVERLAY}Last login: ${LOGIN_TIME}${R}"
     echo ""
 fi
 {% endraw %}
