@@ -1,3 +1,16 @@
+- name: Remove docker prune cron job when disabled
+  ansible.builtin.cron:
+    name: "docker-system-prune"
+    state: absent
+  when: not cron_enabled
+
+- name: Remove extra cron jobs when disabled
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ cron_extra_jobs }}"
+  when: not cron_enabled
+
 - name: Skip if cron disabled
   ansible.builtin.meta: end_role
   when: not cron_enabled

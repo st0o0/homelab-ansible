@@ -1,3 +1,27 @@
+- name: Remove chezmoi binary when disabled
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.local/bin/chezmoi"
+    state: absent
+  when: not dotfiles_enabled
+
+- name: Remove chezmoi source directory when disabled
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.local/share/chezmoi"
+    state: absent
+  when: not dotfiles_enabled
+
+- name: Remove chezmoi config directory when disabled
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.config/chezmoi"
+    state: absent
+  when: not dotfiles_enabled
+
+- name: Reset login shell to bash when disabled
+  ansible.builtin.user:
+    name: "{{ ssh_user }}"
+    shell: /bin/bash
+  when: not dotfiles_enabled
+
 - name: Skip if dotfiles disabled
   ansible.builtin.meta: end_role
   when: not dotfiles_enabled

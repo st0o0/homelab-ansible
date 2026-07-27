@@ -1,3 +1,9 @@
+- name: Disable ufw when disabled
+  community.general.ufw:
+    state: disabled
+  failed_when: false
+  when: not ufw_enabled and not ansible_check_mode
+
 - name: Skip if ufw disabled
   ansible.builtin.meta: end_role
   when: not ufw_enabled

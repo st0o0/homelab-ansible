@@ -1,3 +1,31 @@
+- name: Disable swap when disabled
+  ansible.builtin.command:
+    cmd: "swapoff {{ swap_path }}"
+  failed_when: false
+  changed_when: false
+  when: not swap_enabled
+
+- name: Remove swapfile from fstab when disabled
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "{{ swap_path }}"
+    state: absent
+  when: not swap_enabled
+
+- name: Remove swapfile when disabled
+  ansible.builtin.file:
+    path: "{{ swap_path }}"
+    state: absent
+  when: not swap_enabled
+
+- name: Reset swappiness when disabled
+  ansible.posix.sysctl:
+    name: vm.swappiness
+    value: "60"
+    state: present
+    sysctl_set: true
+  when: not swap_enabled
+
 - name: Skip if swap disabled
   ansible.builtin.meta: end_role
   when: not swap_enabled

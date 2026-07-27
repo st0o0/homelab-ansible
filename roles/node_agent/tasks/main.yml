@@ -1,3 +1,16 @@
+- name: Stop node-agent stack when disabled
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_agent_deploy_path }}"
+    state: absent
+  failed_when: false
+  when: not node_agent_alloy_enabled and not node_agent_hawser_enabled
+
+- name: Remove node-agent deploy directory when disabled
+  ansible.builtin.file:
+    path: "{{ node_agent_deploy_path }}"
+    state: absent
+  when: not node_agent_alloy_enabled and not node_agent_hawser_enabled
+
 - name: Skip node_agent if nothing enabled
   ansible.builtin.meta: end_role
   when: not node_agent_alloy_enabled and not node_agent_hawser_enabled

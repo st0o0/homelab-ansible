@@ -1,3 +1,16 @@
+- name: Remove motd script when disabled
+  ansible.builtin.file:
+    path: /usr/local/sbin/homelab-motd
+    state: absent
+  when: not motd_enabled
+
+- name: Remove bashrc motd hook when disabled
+  ansible.builtin.blockinfile:
+    path: /etc/bash.bashrc
+    marker: "# {mark} ANSIBLE MANAGED - homelab motd"
+    state: absent
+  when: not motd_enabled
+
 - name: Skip if motd disabled
   ansible.builtin.meta: end_role
   when: not motd_enabled

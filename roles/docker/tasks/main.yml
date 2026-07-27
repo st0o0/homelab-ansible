@@ -1,3 +1,43 @@
+- name: Stop and disable Docker service when disabled
+  ansible.builtin.service:
+    name: docker
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not docker_enabled
+
+- name: Stop and disable containerd service when disabled
+  ansible.builtin.service:
+    name: containerd
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not docker_enabled
+
+- name: Remove Docker packages when disabled
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: absent
+    purge: true
+  when: not docker_enabled
+
+- name: Remove Docker APT repository when disabled
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ _docker_dpkg_arch | default('amd64') }}
+      signed-by={{ docker_apt_key_dest }}]
+      https://download.docker.com/linux/{{ ansible_distribution | lower }}
+      {{ ansible_distribution_release }} stable
+    filename: docker
+    state: absent
+  when: not docker_enabled
+
+- name: Remove Docker GPG key when disabled
+  ansible.builtin.file:
+    path: "{{ docker_apt_key_dest }}"
+    state: absent
+  when: not docker_enabled
+
 - name: Skip if docker disabled
   ansible.builtin.meta: end_role
   when: not docker_enabled

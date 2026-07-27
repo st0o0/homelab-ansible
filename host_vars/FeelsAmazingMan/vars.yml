@@ -1,3 +1,9 @@
+# MOTD
+# motd_enabled: true
+
+# Dotfiles
+# dotfiles_enabled: true
+
 # Unattended upgrades
 unattended_upgrades_enabled: true
 # unattended_upgrades_blacklist:
@@ -12,7 +18,8 @@ unattended_upgrades_skip_reboot_required: true
 # swap_enabled: false
 # swap_size: "2G"
 
-# Firewall (extra rules beyond SSH)
+# Firewall
+# ufw_enabled: false
 # ufw_extra_rules:
 #   - { rule: allow, port: 8080, proto: tcp, comment: "Web" }
 
@@ -20,6 +27,7 @@ unattended_upgrades_skip_reboot_required: true
 docker_enabled: false
 
 # Cron
+# cron_enabled: true
 cron_docker_prune: false
 # cron_extra_jobs:
 #   - { name: "cleanup-logs", job: "find /var/log -name '*.gz' -mtime +30 -delete", schedule: "0 4 * * 0" }
