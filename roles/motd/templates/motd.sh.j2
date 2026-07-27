@@ -47,9 +47,9 @@ bar() {
     elif [ "$pct" -ge 60 ]; then color="$YELLOW"
     else color="$GREEN"; fi
     local out="${color}"
-    for ((i=0; i<filled; i++)); do out+="▰"; done
+    for ((i=0; i<filled; i++)); do out+="█"; done
     out+="${OVERLAY}"
-    for ((i=0; i<empty; i++)); do out+="▱"; done
+    for ((i=0; i<empty; i++)); do out+="░"; done
     out+="${R}"
     echo -ne "$out"
 }
