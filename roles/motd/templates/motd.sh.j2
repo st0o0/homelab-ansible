@@ -44,7 +44,7 @@ DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
 # Docker — background (Armbian style: names as comma list)
 DOCKER_TMP=$(mktemp)
 if command -v docker &>/dev/null; then
-    docker ps --format '{{.Names}}' 2>/dev/null | sort | paste -sd', ' - > "$DOCKER_TMP" &
+    docker ps --format '{{.Names}}' 2>/dev/null | sort | paste -sd, - | sed 's/,/, /g' > "$DOCKER_TMP" &
     DOCKER_PID=$!
 fi
 
