@@ -98,15 +98,15 @@ echo -e " ${GREEN}${OS}${R}"
 
 # ── Info ────────────────────────────────────────────────────────────
 echo ""
-printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "Kernel:" "$KERNEL"
-printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "Packages:" "$PKGS"
-[ -n "$IP_ALL" ] && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "IPv4:" "$IP_ALL"
+printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "Kernel:" "$KERNEL"
+printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "Packages:" "$PKGS"
+[ -n "$IP_ALL" ] && printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "IPv4:" "$IP_ALL"
 
 # Containers — wait for background docker
 if [ -n "${DOCKER_PID:-}" ]; then
     wait "$DOCKER_PID" 2>/dev/null
     CONTAINER_LIST=$(<"$DOCKER_TMP")
-    [ -n "$CONTAINER_LIST" ] && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "Containers:" "$CONTAINER_LIST"
+    [ -n "$CONTAINER_LIST" ] && printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "Containers:" "$CONTAINER_LIST"
 fi
 rm -f "$DOCKER_TMP"
 
