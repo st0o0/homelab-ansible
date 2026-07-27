@@ -19,7 +19,7 @@
     dest: "/etc/sudoers.d/{{ ssh_user }}"
     content: "{{ ssh_user }} ALL=(ALL) NOPASSWD:ALL\n"
     mode: "0440"
-    validate: visudo -cf %s
+    validate: /usr/sbin/visudo -cf %s
   when: ansible_user_id == 'root'
 
 - name: Check for local backup key
