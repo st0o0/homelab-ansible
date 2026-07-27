@@ -38,10 +38,10 @@ DISK_PCT=$(df / | awk 'NR==2{gsub(/%/,""); print $5}')
 DISK_USED=$(df -h / | awk 'NR==2{print $3}')
 DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
 
-# Docker — run in background to avoid blocking on slow ARM
+# Docker — single fast command in background (Armbian style)
 DOCKER_TMP=$(mktemp)
 if command -v docker &>/dev/null; then
-    docker ps --format '{{.Names}}' 2>/dev/null | sort > "$DOCKER_TMP" &
+    docker ps --format '{{.Names}}' 2>/dev/null | sort | paste -sd', ' - > "$DOCKER_TMP" &
     DOCKER_PID=$!
 fi
 
@@ -120,22 +120,13 @@ if [ -n "$LAN" ] || [ -n "$WG" ] || [ -n "$IPV6" ]; then
     [ -n "$IPV6" ] && printf "  ${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "ipv6" "$IPV6"
 fi
 
-# Containers — wait for background docker ps
+# Containers — wait for background docker ps, display as comma list
 if [ -n "${DOCKER_PID:-}" ]; then
     wait "$DOCKER_PID" 2>/dev/null
-    mapfile -t CONTAINERS < "$DOCKER_TMP"
-    CONTAINER_COUNT=${#CONTAINERS[@]}
-    if [ "$CONTAINER_COUNT" -gt 0 ]; then
+    CONTAINER_LIST=$(<"$DOCKER_TMP")
+    if [ -n "$CONTAINER_LIST" ]; then
         echo ""
-        hdr "󰡨 Containers" "${CONTAINER_COUNT} running"
-        col=0
-        for name in "${CONTAINERS[@]}"; do
-            [ $col -eq 0 ] && printf "  "
-            printf "${GREEN}●${R} ${SUBTEXT}%-18s${R}" "$name"
-            col=$(( (col + 1) % 4 ))
-            [ $col -eq 0 ] && printf "\n"
-        done
-        [ $col -ne 0 ] && printf "\n"
+        printf "  ${GREEN}%-10s${R}${SUBTEXT}%s${R}\n" "containers" "$CONTAINER_LIST"
     fi
 fi
 rm -f "$DOCKER_TMP"
