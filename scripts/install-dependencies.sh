@@ -7,7 +7,7 @@ set -euo pipefail
 # Owned by the dotfiles repo — single source of truth for shell tools.
 echo "==> Installing shell toolchain via dotfiles/install.sh..."
 curl -fsSL https://raw.githubusercontent.com/st0o0/dotfiles/main/install.sh \
-    | bash -s -- --profile workstation
+    | bash -s -- --profile devcontainer
 
 # --------------------------------------------------------------------------
 # Layer 2: Infrastructure tools (DevContainer-specific)

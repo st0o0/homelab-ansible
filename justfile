@@ -1,29 +1,56 @@
 set dotenv-load
+set windows-shell := ["pwsh", "-NoProfile", "-Command"]
 
-# --- DevContainer management (wraps .devcontainer/devcontainer.sh) ---
-# Pass VARIANT=windows to target the Windows host config (default: linux).
+# --- DevContainer management ---
+# On Linux: wraps .devcontainer/devcontainer.sh (VARIANT default: linux)
+# On Windows: wraps .devcontainer/devcontainer.ps1 (Variant default: windows)
 
-variant := env_var_or_default("VARIANT", "linux")
+variant := env_var_or_default("VARIANT", if os() == "windows" { "windows" } else { "linux" })
 
 # Create/start the dev container
+[unix]
 up:
     .devcontainer/devcontainer.sh --variant {{variant}} up
 
+[windows]
+up:
+    devcontainer up --workspace-folder . --config .devcontainer/{{variant}}/devcontainer.json
+
 # Stop the dev container
+[unix]
 down:
     .devcontainer/devcontainer.sh --variant {{variant}} down
 
+[windows]
+down:
+    docker stop $(docker ps -q --filter "label=devcontainer.local_folder=$PWD")
+
 # Remove + rebuild the dev container from scratch (--no-cache)
+[unix]
 rebuild:
     .devcontainer/devcontainer.sh --variant {{variant}} rebuild
 
+[windows]
+rebuild:
+    devcontainer up --workspace-folder . --config .devcontainer/{{variant}}/devcontainer.json --remove-existing-container --build-no-cache
+
 # Open an interactive shell inside the dev container
+[unix]
 shell:
     .devcontainer/devcontainer.sh --variant {{variant}} shell
 
+[windows]
+shell:
+    devcontainer exec --workspace-folder . --config .devcontainer/{{variant}}/devcontainer.json tmux new-session -A -s main
+
 # Run a command inside the dev container, e.g.: just exec ansible --version
+[unix]
 exec *ARGS:
     .devcontainer/devcontainer.sh --variant {{variant}} exec {{ARGS}}
+
+[windows]
+exec *ARGS:
+    devcontainer exec --workspace-folder . --config .devcontainer/{{variant}}/devcontainer.json {{ARGS}}
 
 # --- Ansible ---
 
