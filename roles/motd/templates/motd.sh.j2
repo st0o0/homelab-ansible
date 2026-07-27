@@ -4,10 +4,8 @@
 # ── Catppuccin Mocha palette (true-color) ────────────────────────────
 R='\e[0m'
 MAUVE='\e[38;2;203;166;247m'
-BLUE='\e[38;2;137;180;250m'
 GREEN='\e[38;2;166;227;161m'
 RED='\e[38;2;243;139;168m'
-YELLOW='\e[38;2;249;226;175m'
 SUBTEXT='\e[38;2;166;173;200m'
 OVERLAY='\e[38;2;108;112;134m'
 BOLD='\e[1m'
@@ -16,6 +14,7 @@ BOLD='\e[1m'
 HOSTNAME=$(hostname)
 KERNEL=$(uname -r)
 OS=$(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME" || uname -o)
+PKGS=$(dpkg -l 2>/dev/null | grep -c '^ii' || echo "?")
 
 # Uptime — compact, from /proc
 UP_SEC=$(cut -d. -f1 /proc/uptime)
@@ -29,52 +28,56 @@ CPU_CORES=$(nproc)
 CPU_TEMP=""
 [ -f /sys/class/thermal/thermal_zone0/temp ] && CPU_TEMP="$(( $(cat /sys/class/thermal/thermal_zone0/temp) / 1000 ))"
 
-# Load
-LOAD_1M=$(cut -d' ' -f1 /proc/loadavg)
+# Load as percentage
+LOAD_PCT=$(awk '{printf "%.0f", $1 * 100 / '"$CPU_CORES"'}' /proc/loadavg)
 
 # Memory
 MEM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
 MEM_TOTAL=$(free -h | awk '/^Mem:/{print $2}')
+
+# Swap (only if active)
+SWAP_PCT=""
+SWAP_TOTAL=$(free | awk '/^Swap:/{print $2}')
+if [ "$SWAP_TOTAL" -gt 0 ] 2>/dev/null; then
+    SWAP_PCT=$(free | awk '/^Swap:/{printf "%.0f", $3/$2*100}')
+    SWAP_TOTAL_H=$(free -h | awk '/^Swap:/{print $2}')
+fi
 
 # Disk
 DISK_PCT=$(df / | awk 'NR==2{gsub(/%/,""); print $5}')
 DISK_USED=$(df -h / | awk 'NR==2{print $3}')
 DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
 
-# Docker — background (Armbian style: names as comma list)
+# IPv4 — all non-loopback, non-docker IPs; fallback to hostname -I
+IP_ALL=$(ip -4 -o addr show 2>/dev/null \
+    | awk '$2 != "lo" && $4 !~ /^172\.(1[6-9]|2[0-9]|3[01])\./ {gsub(/\/.*/, "", $4); print $4}' \
+    | paste -sd', ' - | sed 's/,/, /g')
+[ -z "$IP_ALL" ] && IP_ALL=$(hostname -I 2>/dev/null | xargs | sed 's/ /, /g')
+
+# Docker — background (Armbian style)
 DOCKER_TMP=$(mktemp)
 if command -v docker &>/dev/null; then
     docker ps --format '{{.Names}}' 2>/dev/null | sort | paste -sd, - | sed 's/,/, /g' > "$DOCKER_TMP" &
     DOCKER_PID=$!
 fi
 
-# Network — classify from ip addr (instant)
-LAN="" WG="" IPV6=""
-while IFS= read -r line; do
-    iface=$(echo "$line" | awk '{print $NF}')
-    addr=$(echo "$line" | awk '{gsub(/\/.*/, "", $2); print $2}')
-    if echo "$addr" | grep -qE '^(fd|fe80)'; then
-        [ -z "$IPV6" ] && IPV6="$addr"
-    elif echo "$iface" | grep -qiE '^wg' || echo "$addr" | grep -qE '^10\.0\.101\.'; then
-        WG="${WG:+$WG, }$addr"
-    elif echo "$addr" | grep -qE '^172\.(1[6-9]|2[0-9]|3[01])\.'; then
-        :
-    elif echo "$addr" | grep -qE '^(10\.|192\.168\.)'; then
-        LAN="${LAN:+$LAN, }$addr"
-    fi
-done < <(ip -o addr show 2>/dev/null | grep -v ' lo ' | awk '/inet6? /{print}')
-
 # ── Helpers ─────────────────────────────────────────────────────────
-# Armbian-style two-column row: "  Label:  value\tLabel:  value\n"
-# Color value green normally, red when over threshold
-row() {
-    local l1="$1" v1="$2" t1="${3:-}" l2="${4:-}" v2="${5:-}" t2="${6:-}"
-    local c1="$GREEN" c2="$GREEN"
-    [ -n "$t1" ] && [ "$v1" -ge "$t1" ] 2>/dev/null && c1="$RED"
-    [ -n "$t2" ] && [ "$v2" -ge "$t2" ] 2>/dev/null && c2="$RED"
-    printf "  ${SUBTEXT}%-14s${R}${c1}%s${R}" "$l1" "$v1"
+# Color value: green normally, red when numeric value >= threshold
+cval() {
+    local val="$1" thresh="${2:-}"
+    if [ -n "$thresh" ] && [ "${val%%[!0-9]*}" -ge "$thresh" ] 2>/dev/null; then
+        echo -ne "${RED}${val}${R}"
+    else
+        echo -ne "${GREEN}${val}${R}"
+    fi
+}
+
+# Two-column row
+row2() {
+    local l1="$1" v1="$2" l2="${3:-}" v2="${4:-}"
+    printf "  ${SUBTEXT}%-14s${R}%b" "$l1" "$v1"
     if [ -n "$l2" ]; then
-        printf "\t${SUBTEXT}%-10s${R}${c2}%s${R}" "$l2" "$v2"
+        printf "\t${SUBTEXT}%-9s${R}%b" "$l2" "$v2"
     fi
     printf "\n"
 }
@@ -91,15 +94,13 @@ hdr() {
 BANNER=$(figlet -f small "$HOSTNAME" 2>/dev/null || echo " $HOSTNAME")
 echo ""
 echo -e "${MAUVE}${BOLD}${BANNER}${R}"
-echo -e " ${SUBTEXT}${OS} · ${KERNEL}${R}"
+echo -e " ${GREEN}${OS}${R}"
 
-# ── Info (Armbian-style label: value pairs) ─────────────────────────
+# ── Info ────────────────────────────────────────────────────────────
 echo ""
-
-# Network
-[ -n "$LAN" ]  && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "IPv4:" "$LAN"
-[ -n "$WG" ]   && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "WireGuard:" "$WG"
-[ -n "$IPV6" ] && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "IPv6:" "$IPV6"
+printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "Kernel:" "$KERNEL"
+printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "Packages:" "$PKGS"
+[ -n "$IP_ALL" ] && printf "  ${SUBTEXT}%-14s${R}${GREEN}%s${R}\n" "IPv4:" "$IP_ALL"
 
 # Containers — wait for background docker
 if [ -n "${DOCKER_PID:-}" ]; then
@@ -109,18 +110,24 @@ if [ -n "${DOCKER_PID:-}" ]; then
 fi
 rm -f "$DOCKER_TMP"
 
-# Performance header
+# ── Performance ─────────────────────────────────────────────────────
 echo ""
 hdr "Performance"
 echo ""
 
-row "Uptime:" "$UPTIME" "" "Load:" "$LOAD_1M"
+row2 "Uptime:" "$(cval "$UPTIME")" "Load:" "$(cval "${LOAD_PCT}%" 90)"
 
 CPU_LINE="${CPU_CORES} cores"
-[ -n "$CPU_TEMP" ] && CPU_LINE="${CPU_LINE}, ${CPU_TEMP}°C"
-row "CPU:" "$CPU_LINE" "" "Memory:" "${MEM_PCT}% of ${MEM_TOTAL}" "85"
+[ -n "$CPU_TEMP" ] && CPU_LINE="${CPU_LINE}, $(cval "${CPU_TEMP}°C" 70)"
+row2 "CPU:" "$(echo -ne "${GREEN}${CPU_LINE}${R}")" "Memory:" "$(cval "${MEM_PCT}%" 85) of ${MEM_TOTAL}"
 
-row "Disk /:" "${DISK_PCT}% of ${DISK_TOTAL}" "85" "Usage:" "${DISK_USED} / ${DISK_TOTAL}"
+DISK_LINE="$(cval "${DISK_PCT}%" 85) of ${DISK_TOTAL}"
+row2 "Disk /:" "$DISK_LINE" "Usage:" "$(echo -ne "${GREEN}${DISK_USED} / ${DISK_TOTAL}${R}")"
+
+# Swap (only if present and >0 total)
+if [ -n "$SWAP_PCT" ]; then
+    row2 "Swap:" "$(cval "${SWAP_PCT}%" 80) of ${SWAP_TOTAL_H}"
+fi
 
 # Storage (only if >1 mount)
 declare -a ST_N=() ST_P=() ST_U=() ST_T=()
@@ -140,11 +147,11 @@ if [ "${#ST_N[@]}" -gt 1 ]; then
     hdr "Storage"
     echo ""
     for ((i=0; i<${#ST_N[@]}; i++)); do
-        row "${ST_N[$i]}:" "${ST_P[$i]}% of ${ST_T[$i]}" "85" "Usage:" "${ST_U[$i]} / ${ST_T[$i]}"
+        row2 "${ST_N[$i]}:" "$(cval "${ST_P[$i]}%" 85) of ${ST_T[$i]}" "Usage:" "$(echo -ne "${GREEN}${ST_U[$i]} / ${ST_T[$i]}${R}")"
     done
 fi
 
-# Aliases
+# ── Aliases ─────────────────────────────────────────────────────────
 echo ""
 hdr "Aliases"
 echo ""
@@ -153,7 +160,7 @@ echo -e "  ${GREEN}dps${R}${OVERLAY}·${R}${GREEN}dprune${R}${OVERLAY}·${R}${GR
 echo -e "  ${GREEN}cdd${R} ${OVERLAY}<stack>${R}          ${OVERLAY}cd /docker/<stack>${R}"
 echo -e "  ${GREEN}update${R}${OVERLAY}·${R}${GREEN}banner${R}${OVERLAY}·${R}${GREEN}clh${R}${OVERLAY}·${R}${GREEN}tidy${R}${OVERLAY}·${R}${GREEN}apt-repair${R}  ${OVERLAY}system maintenance${R}"
 
-# Last login
+# ── Last login ──────────────────────────────────────────────────────
 LAST=$(last -1 -R "$USER" 2>/dev/null | head -1)
 if [ -n "$LAST" ] && ! echo "$LAST" | grep -q "^$"; then
     LOGIN_TIME=$(echo "$LAST" | awk '{for(i=3;i<=NF;i++) printf "%s ", $i}' | xargs)
