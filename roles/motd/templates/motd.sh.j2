@@ -217,6 +217,12 @@ echo -e "  ${GREEN}clh${R}               ${OVERLAY}clear shell history${R}"
 echo -e "  ${GREEN}tidy${R}              ${OVERLAY}remove stale home files${R}"
 echo -e "  ${GREEN}reload${R}            ${OVERLAY}restart gpg-agent${R}"
 echo ""
+echo -e "  ${BLUE}repair${R}"
+echo -e "  ${GREEN}apt-repair${R}        ${OVERLAY}full fix: dpkg + deps + clean${R}"
+echo -e "  ${GREEN}apt-fix-keys${R}      ${OVERLAY}migrate legacy apt keys${R}"
+echo -e "  ${GREEN}apt-fix-dpkg${R}      ${OVERLAY}fix interrupted dpkg${R}"
+echo -e "  ${GREEN}apt-fix-deps${R}      ${OVERLAY}fix broken dependencies${R}"
+echo ""
 
 # ── Last login ───────────────────────────────────────────────────────
 LAST=$(last -1 -R "$USER" 2>/dev/null | head -1)
