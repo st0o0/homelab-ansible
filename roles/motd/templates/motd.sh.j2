@@ -95,18 +95,16 @@ BANNER=$(figlet -f small "$HOSTNAME" 2>/dev/null || echo " $HOSTNAME")
 echo ""
 echo -e "${MAUVE}${BOLD}${BANNER}${R}"
 echo -e " ${GREEN}${OS}${R}"
-
-# ── Info ────────────────────────────────────────────────────────────
 echo ""
-printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "Kernel:" "$KERNEL"
-printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "Packages:" "$PKGS"
-[ -n "$IP_ALL" ] && printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "IPv4:" "$IP_ALL"
+echo -e " ${BOLD}Kernel:${R}       ${KERNEL}"
+echo -e " ${BOLD}Packages:${R}     ${PKGS}"
+[ -n "$IP_ALL" ] && echo -e " ${BOLD}IPv4:${R}         ${IP_ALL}"
 
 # Containers — wait for background docker
 if [ -n "${DOCKER_PID:-}" ]; then
     wait "$DOCKER_PID" 2>/dev/null
     CONTAINER_LIST=$(<"$DOCKER_TMP")
-    [ -n "$CONTAINER_LIST" ] && printf " ${SUBTEXT}%-15s${R}${GREEN}%s${R}\n" "Containers:" "$CONTAINER_LIST"
+    [ -n "$CONTAINER_LIST" ] && echo -e " ${BOLD}Containers:${R}   ${GREEN}${CONTAINER_LIST}${R}"
 fi
 rm -f "$DOCKER_TMP"
 
