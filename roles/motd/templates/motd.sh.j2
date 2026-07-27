@@ -41,8 +41,9 @@ DISK_TOTAL=$(df -h / | awk 'NR==2{print $2}')
 # Usage: bar <percent>
 # Outputs colored ▰▱ bar with no trailing reset
 bar() {
-    local pct=$1 filled=$(( pct / 10 )) empty color
-    empty=$(( 10 - filled ))
+    local pct=$1 color
+    local filled=$(( pct / 10 ))
+    local empty=$(( 10 - filled ))
     if [ "$pct" -ge 85 ]; then color="$RED"
     elif [ "$pct" -ge 60 ]; then color="$YELLOW"
     else color="$GREEN"; fi
