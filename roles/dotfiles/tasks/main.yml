@@ -53,6 +53,13 @@
   become_user: "{{ ssh_user }}"
   when: not _chezmoi_source.stat.exists
 
+- name: Reset chezmoi script state (re-run run_once scripts)
+  ansible.builtin.command:
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi state delete-bucket --bucket=scriptState
+  become: true
+  become_user: "{{ ssh_user }}"
+  when: dotfiles_reset_scripts | bool
+
 - name: Update dotfiles (subsequent runs)
   ansible.builtin.command:
     cmd: /home/{{ ssh_user }}/.local/bin/chezmoi update --force
