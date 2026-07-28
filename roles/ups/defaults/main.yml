@@ -1,0 +1,5 @@
+ups_client_enabled: false
+ups_server_host: "{{ hostvars['FeelsUPSMan']['ansible_host'] }}"
+ups_name: ups
+ups_monitor_user: monuser
+ups_monitor_password: secret

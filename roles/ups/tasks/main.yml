@@ -1,0 +1,57 @@
+- name: Stop nut-monitor when disabled
+  ansible.builtin.service:
+    name: nut-monitor
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not ups_client_enabled
+
+- name: Remove NUT client packages when disabled
+  ansible.builtin.apt:
+    name: nut-client
+    state: absent
+    purge: true
+  when: not ups_client_enabled
+
+- name: Remove NUT config when disabled
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/nut/upsmon.conf
+    - /etc/nut/nut.conf
+  when: not ups_client_enabled
+
+- name: Skip if ups client disabled
+  ansible.builtin.meta: end_role
+  when: not ups_client_enabled
+
+- name: Install NUT client
+  ansible.builtin.apt:
+    name: nut-client
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure NUT mode
+  ansible.builtin.copy:
+    dest: /etc/nut/nut.conf
+    content: |
+      MODE=netclient
+    mode: "0644"
+  notify: Restart nut-monitor
+
+- name: Configure upsmon
+  ansible.builtin.template:
+    src: upsmon.conf.j2
+    dest: /etc/nut/upsmon.conf
+    mode: "0640"
+    owner: root
+    group: nut
+  notify: Restart nut-monitor
+
+- name: Enable and start nut-monitor
+  ansible.builtin.service:
+    name: nut-monitor
+    enabled: true
+    state: started
