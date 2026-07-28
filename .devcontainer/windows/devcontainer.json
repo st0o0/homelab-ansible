@@ -10,10 +10,11 @@
 
     "mounts": [
         "source=homelab-ansible-ssh,target=/home/vscode/.ssh,type=volume",
-        "source=homelab-ansible-sops,target=/home/vscode/.config/sops,type=volume"
+        "source=homelab-ansible-sops,target=/home/vscode/.config/sops,type=volume",
+        "source=homelab-ansible-bw,target=/home/vscode/.config/Bitwarden CLI,type=volume"
     ],
 
-    "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.ssh /home/vscode/.config && sudo chmod +x scripts/install-dependencies.sh && bash scripts/install-dependencies.sh",
+    "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.ssh /home/vscode/.config '/home/vscode/.config/Bitwarden CLI' && sudo chmod +x scripts/install-dependencies.sh && bash scripts/install-dependencies.sh",
 
     "postStartCommand": "bash scripts/update-dotfiles.sh",
 

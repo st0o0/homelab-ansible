@@ -1,8 +1,8 @@
 # MOTD
-# motd_enabled: true
+motd_enabled: false
 
 # Dotfiles
-# dotfiles_enabled: true
+dotfiles_enabled: false
 
 # Unattended upgrades
 unattended_upgrades_enabled: true

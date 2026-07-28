@@ -32,8 +32,14 @@ npm install -g @bitwarden/cli --silent
 
 echo "==> Configuring Bitwarden CLI..."
 if [ -n "${BW_SERVER_URL:-}" ]; then
-    bw config server "$BW_SERVER_URL"
-    echo "    Server: $BW_SERVER_URL"
+    CURRENT_URL=$(bw config server 2>/dev/null || true)
+    if [ "$CURRENT_URL" != "$BW_SERVER_URL" ]; then
+        bw logout 2>/dev/null || true
+        bw config server "$BW_SERVER_URL"
+        echo "    Server set: $BW_SERVER_URL"
+    else
+        echo "    Server already configured: $BW_SERVER_URL"
+    fi
 else
     echo "    No BW_SERVER_URL set — using Bitwarden cloud"
 fi
