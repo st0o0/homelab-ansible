@@ -1,0 +1,171 @@
+- name: Determine if any component is enabled
+  ansible.builtin.set_fact:
+    _node_stack_any_enabled: >-
+      {{ node_stack_alloy_enabled or node_stack_hawser_enabled
+         or node_stack_bifrost_enabled or node_stack_ups_enabled
+         or node_stack_backrest_enabled }}
+
+- name: Stop node-stack when disabled
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_stack_deploy_path }}"
+    state: absent
+  failed_when: false
+  when: not _node_stack_any_enabled
+
+- name: Remove node-stack deploy directory when disabled
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}"
+    state: absent
+  when: not _node_stack_any_enabled
+
+- name: Skip node_stack if nothing enabled
+  ansible.builtin.meta: end_role
+  when: not _node_stack_any_enabled
+
+- name: Check Docker is installed
+  ansible.builtin.stat:
+    path: /usr/bin/docker
+  register: _node_stack_docker_bin
+
+- name: Fail if Docker isn't installed
+  ansible.builtin.assert:
+    that: _node_stack_docker_bin.stat.exists
+    fail_msg: >-
+      node_stack requires Docker. Run the docker role first (e.g. plain
+      `just deploy <host>`, or `--tags docker,node_stack`).
+
+- name: Create stack directories
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: >-
+    {{ ['.']
+       + (['alloy'] if node_stack_alloy_enabled else [])
+       + (['nut', 'peanut'] if node_stack_ups_enabled else [])
+       + (['backrest'] if node_stack_backrest_enabled else []) }}
+
+# ── Alloy ───────────────────────────────────────────────────────────
+- name: Copy Alloy config from stacks source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../stacks/observability-agent/alloy/config.alloy"
+    dest: "{{ node_stack_deploy_path }}/alloy/config.alloy"
+    mode: "0644"
+  when: node_stack_alloy_enabled
+  notify: Restart node-stack
+
+- name: Deploy Alloy compose file
+  ansible.builtin.copy:
+    src: compose.alloy.yml
+    dest: "{{ node_stack_deploy_path }}/compose.alloy.yml"
+    mode: "0644"
+  when: node_stack_alloy_enabled
+  notify: Restart node-stack
+
+- name: Remove Alloy compose file when disabled
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}/compose.alloy.yml"
+    state: absent
+  when: not node_stack_alloy_enabled
+  notify: Restart node-stack
+
+# ── Hawser ──────────────────────────────────────────────────────────
+- name: Deploy Hawser compose file
+  ansible.builtin.copy:
+    src: compose.hawser.yml
+    dest: "{{ node_stack_deploy_path }}/compose.hawser.yml"
+    mode: "0644"
+  when: node_stack_hawser_enabled
+  notify: Restart node-stack
+
+- name: Remove Hawser compose file when disabled
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}/compose.hawser.yml"
+    state: absent
+  when: not node_stack_hawser_enabled
+  notify: Restart node-stack
+
+# ── Backrest ────────────────────────────────────────────────────────
+- name: Deploy Backrest config
+  ansible.builtin.template:
+    src: backrest-config.json.j2
+    dest: "{{ node_stack_deploy_path }}/backrest/config.json"
+    mode: "0600"
+  when: node_stack_backrest_enabled
+  notify: Restart node-stack
+
+- name: Deploy Backrest compose file
+  ansible.builtin.copy:
+    src: compose.backrest.yml
+    dest: "{{ node_stack_deploy_path }}/compose.backrest.yml"
+    mode: "0644"
+  when: node_stack_backrest_enabled
+  notify: Restart node-stack
+
+- name: Remove Backrest compose file when disabled
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}/compose.backrest.yml"
+    state: absent
+  when: not node_stack_backrest_enabled
+  notify: Restart node-stack
+
+# ── UPS ─────────────────────────────────────────────────────────────
+- name: Deploy UPS compose file
+  ansible.builtin.copy:
+    src: compose.ups.yml
+    dest: "{{ node_stack_deploy_path }}/compose.ups.yml"
+    mode: "0644"
+  when: node_stack_ups_enabled
+  notify: Restart node-stack
+
+- name: Remove UPS compose file when disabled
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}/compose.ups.yml"
+    state: absent
+  when: not node_stack_ups_enabled
+  notify: Restart node-stack
+
+# ── Bifrost ─────────────────────────────────────────────────────────
+- name: Deploy Bifrost compose override
+  ansible.builtin.copy:
+    src: compose.bifrost.yml
+    dest: "{{ node_stack_deploy_path }}/compose.bifrost.yml"
+    mode: "0644"
+  when: node_stack_bifrost_enabled
+  notify: Restart node-stack
+
+- name: Remove Bifrost compose override when disabled
+  ansible.builtin.file:
+    path: "{{ node_stack_deploy_path }}/compose.bifrost.yml"
+    state: absent
+  when: not node_stack_bifrost_enabled
+  notify: Restart node-stack
+
+# ── Shared ──────────────────────────────────────────────────────────
+- name: Deploy base compose file
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ node_stack_deploy_path }}/compose.yml"
+    mode: "0644"
+  notify: Restart node-stack
+
+- name: Deploy environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ node_stack_deploy_path }}/.env"
+    mode: "0600"
+  notify: Restart node-stack
+
+- name: Start node-stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_stack_deploy_path }}"
+    files: "{{ _node_stack_compose_files }}"
+    state: present
+  vars:
+    _node_stack_compose_files: >-
+      {{ ['compose.yml']
+         + (['compose.alloy.yml'] if node_stack_alloy_enabled else [])
+         + (['compose.hawser.yml'] if node_stack_hawser_enabled else [])
+         + (['compose.backrest.yml'] if node_stack_backrest_enabled else [])
+         + (['compose.ups.yml'] if node_stack_ups_enabled else [])
+         + (['compose.bifrost.yml'] if node_stack_bifrost_enabled else []) }}

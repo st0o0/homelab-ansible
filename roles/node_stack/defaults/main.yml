@@ -1,0 +1,32 @@
+node_stack_deploy_path: /docker/node-stack
+node_stack_hostname: "{{ inventory_hostname }}"
+node_stack_tz: Europe/Berlin
+
+# Component toggles
+node_stack_alloy_enabled: true
+node_stack_hawser_enabled: true
+node_stack_bifrost_enabled: false
+node_stack_ups_enabled: false
+node_stack_backrest_enabled: false
+
+# Alloy
+node_stack_scrape_interval: 30s
+
+# Hawser (Dockhand)
+node_stack_dockhand_heartbeat: 30
+
+# Bifrost (WireGuard)
+node_stack_bifrost_peer_allowed_ips: 10.13.13.0/24
+node_stack_bifrost_peer_keepalive: 25
+node_stack_bifrost_peer_preshared_key: ""
+node_stack_bifrost_listen_port: 0
+node_stack_bifrost_mtu: 1420
+
+# UPS (NUT)
+node_stack_ups_driver: usbhid-ups
+node_stack_ups_name: ups
+node_stack_ups_port: auto
+node_stack_ups_pollinterval: 15
+
+# Backrest
+node_stack_backrest_port: 9898

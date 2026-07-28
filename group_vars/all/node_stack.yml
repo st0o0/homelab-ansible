@@ -1,0 +1,9 @@
+node_stack_deploy_path: /docker/node-stack
+node_stack_scrape_interval: 30s
+node_stack_tz: Europe/Berlin
+node_stack_dockhand_heartbeat: 30
+node_stack_bifrost_peer_allowed_ips: 10.13.13.0/24
+node_stack_bifrost_peer_keepalive: 25
+node_stack_bifrost_peer_preshared_key: ""
+node_stack_bifrost_listen_port: 0
+node_stack_bifrost_mtu: 1420

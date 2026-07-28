@@ -1,5 +1,5 @@
 # Base compose — logging defaults and shared config.
-# Layer compose.alloy.yml and/or compose.hawser.yml on top.
+# Layer component compose files on top.
 x-logging: &default-logging
   driver: json-file
   options:

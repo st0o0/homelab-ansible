@@ -1,7 +1,7 @@
 services:
   alloy:
     image: grafana/alloy:v1.17.1
-    container_name: node-agent-alloy
+    container_name: node-stack-alloy
     restart: unless-stopped
     logging:
       driver: json-file

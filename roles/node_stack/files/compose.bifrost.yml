@@ -1,15 +1,16 @@
 # Bifrost override — adds WireGuard sidecar and routes
-# Alloy + Hawser traffic through the tunnel.
+# dependent services through the tunnel.
 services:
   bifrost:
     image: ghcr.io/st0o0/bifrost:latest
-    container_name: node-agent-bifrost
+    container_name: node-stack-bifrost
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:
+      - TZ=${TZ}
       - BIFROST_PRIVATE_KEY=${BIFROST_PRIVATE_KEY}
       - BIFROST_ADDRESS=${BIFROST_ADDRESS}
       - BIFROST_LISTEN_PORT=${BIFROST_LISTEN_PORT}
@@ -38,3 +39,9 @@ services:
     depends_on:
       bifrost:
         condition: service_started
+
+  backrest:
+    network_mode: service:bifrost
+    depends_on:
+      bifrost:
+        condition: service_healthy

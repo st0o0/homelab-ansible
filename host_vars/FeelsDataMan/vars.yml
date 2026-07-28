@@ -1,7 +1,8 @@
-# MOTD
-motd_enabled: false
+# Bootstrap
+# hostname_enabled: true
 
-# Dotfiles
+# Shell
+motd_enabled: false
 dotfiles_enabled: false
 
 # Unattended upgrades
@@ -29,6 +30,7 @@ unattended_upgrades_enabled: true
 # cron_extra_jobs: []
 
 # Node agent
-node_agent_alloy_enabled: false
-node_agent_hawser_enabled: false
-node_agent_bifrost_enabled: false
+node_stack_alloy_enabled: false
+node_stack_hawser_enabled: false
+node_stack_bifrost_enabled: false
+node_stack_backrest_enabled: false

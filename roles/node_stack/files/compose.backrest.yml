@@ -1,0 +1,23 @@
+services:
+  backrest:
+    image: garethgeorge/backrest:latest
+    container_name: node-stack-backrest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    environment:
+      - TZ=${TZ}
+      - BACKREST_DATA=/data
+      - BACKREST_CONFIG=/config/config.json
+    ports:
+      - "${BACKREST_PORT}:9898"
+    volumes:
+      - ./backrest/config.json:/config/config.json:ro
+      - backrest-data:/data
+      - /docker:/docker:ro
+
+volumes:
+  backrest-data:

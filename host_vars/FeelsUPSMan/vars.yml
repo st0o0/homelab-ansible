@@ -1,14 +1,15 @@
-# MOTD
-# motd_enabled: true
+# Bootstrap
+# hostname_enabled: true
 
-# Dotfiles
-# dotfiles_enabled: true
+# Shell
+motd_enabled: false
+dotfiles_enabled: false
 
 # Unattended upgrades
 unattended_upgrades_enabled: true
 # unattended_upgrades_blacklist: []
 # unattended_upgrades_skip_reboot_required: false
-# unattended_upgrades_auto_reboot: false
+unattended_upgrades_auto_reboot: false
 # unattended_upgrades_auto_reboot_time: "04:00"
 
 # Swap
@@ -29,9 +30,11 @@ unattended_upgrades_enabled: true
 # cron_extra_jobs: []
 
 # UPS
-ups_enabled: false
+ups_client_enabled: false
 
 # Node agent
-node_agent_alloy_enabled: false
-node_agent_hawser_enabled: true
-node_agent_bifrost_enabled: false
+node_stack_alloy_enabled: false
+node_stack_ups_enabled: true
+node_stack_backrest_enabled: false
+node_stack_hawser_enabled: true
+node_stack_bifrost_enabled: false
