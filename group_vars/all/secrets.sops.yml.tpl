@@ -1,4 +1,4 @@
 # Shared secrets — available to all hosts
-# Override per host in host_vars/<host>/secret.sops.yml
+# Override per host in host_vars/<host>/secrets.sops.yml
 ups_host: "CHANGEME"
 ups_password: "CHANGEME"

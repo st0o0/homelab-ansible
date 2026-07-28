@@ -120,20 +120,20 @@ vars HOST:
     fi
 
 # Edit encrypted secrets (host or 'all' for shared secrets)
-secret HOST:
+secrets HOST:
     #!/usr/bin/env bash
     if [ "{{HOST}}" = "all" ]; then
-        SECRET="group_vars/all/secret.sops.yml"
-        TEMPLATE="group_vars/all/secret.sops.yml.tpl"
+        SECRET="group_vars/all/secrets.sops.yml"
+        TEMPLATE="group_vars/all/secrets.sops.yml.tpl"
     else
-        SECRET="host_vars/{{HOST}}/secret.sops.yml"
-        TEMPLATE="host_vars/secret.sops.yml.tpl"
+        SECRET="host_vars/{{HOST}}/secrets.sops.yml"
+        TEMPLATE="host_vars/secrets.sops.yml.tpl"
     fi
     if [ ! -f "$SECRET" ]; then
         mkdir -p "$(dirname "$SECRET")"
-        cp "$TEMPLATE" "/tmp/secret.sops.yml"
-        sops --config .sops.yaml --encrypt "/tmp/secret.sops.yml" > "$SECRET"
-        rm "/tmp/secret.sops.yml"
+        cp "$TEMPLATE" "/tmp/secrets.sops.yml"
+        sops --config .sops.yaml --encrypt "/tmp/secrets.sops.yml" > "$SECRET"
+        rm "/tmp/secrets.sops.yml"
     fi
     sops "$SECRET" || true
 
@@ -147,12 +147,12 @@ new-host HOST:
         cp "$VARS_TPL" "$VARS"
         echo "  Created $VARS from template"
     fi
-    SECRET="host_vars/{{HOST}}/secret.sops.yml"
-    TEMPLATE="host_vars/secret.sops.yml.tpl"
+    SECRET="host_vars/{{HOST}}/secrets.sops.yml"
+    TEMPLATE="host_vars/secrets.sops.yml.tpl"
     if [ ! -f "$SECRET" ]; then
-        cp "$TEMPLATE" "/tmp/secret.sops.yml"
-        sops --config .sops.yaml --encrypt "/tmp/secret.sops.yml" > "$SECRET"
-        rm "/tmp/secret.sops.yml"
+        cp "$TEMPLATE" "/tmp/secrets.sops.yml"
+        sops --config .sops.yaml --encrypt "/tmp/secrets.sops.yml" > "$SECRET"
+        rm "/tmp/secrets.sops.yml"
     fi
     sops "$SECRET" || true
     echo ""

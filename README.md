@@ -30,14 +30,14 @@ This will:
 - Generate an age keypair (or restore it from Bitwarden if it exists)
 - Back up the private key to Bitwarden as a Secure Note
 - Update `.sops.yaml` with your public key
-- Create encrypted `secret.sops.yml` files for every host in `hosts.yml`
+- Create encrypted `secrets.sops.yml` files for every host in `hosts.yml`
 
 On a new machine, `just init` automatically restores your age key from Bitwarden — no manual key copying needed.
 
 ### 4. Fill in secrets
 
 ```bash
-just secret obs-1
+just secrets obs-1
 ```
 
 SOPS opens your editor with pre-populated fields. Replace the `CHANGEME` values:
@@ -50,7 +50,7 @@ node_agent_dockhand_url: "http://10.0.20.102:9000"
 node_agent_dockhand_token: "your-actual-token"
 ```
 
-Repeat for each host: `just secret <hostname>`
+Repeat for each host: `just secrets <hostname>`
 
 ### 5. Deploy the container's SSH key to your servers
 
@@ -80,7 +80,7 @@ git add .sops.yaml host_vars/
 git commit -m "feat(ansible): add SOPS-encrypted host secrets"
 ```
 
-The `secret.sops.yml` files are safely encrypted — values are hidden, but the YAML structure is visible in diffs.
+The `secrets.sops.yml` files are safely encrypted — values are hidden, but the YAML structure is visible in diffs.
 
 ---
 
@@ -130,7 +130,7 @@ just bootstrap myserver st0o0           # connects as st0o0 instead of root
 | `just sync-dotfiles` | Enable chezmoi where missing + pull/apply latest dotfiles everywhere |
 | `just bootstrap HOST [USER]` | First-time setup (default: root) |
 | `just setup` | New workstation — restore age key + SSH keys from Bitwarden |
-| `just secret HOST` | Edit encrypted secrets |
+| `just secrets HOST` | Edit encrypted secrets |
 | `just vars HOST` | Edit plaintext feature toggles |
 | `just new-host HOST` | Scaffold a new host |
 | `just show-key` | Show container SSH public key |
@@ -192,7 +192,7 @@ homelab-ansible/
     node_agent.yml              #   Alloy/Hawser defaults
   host_vars/<hostname>/
     vars.yml                    # Feature toggles (plaintext, in git)
-    secret.sops.yml             # Secrets: IPs, passwords, tokens (encrypted, in git)
+    secrets.sops.yml             # Secrets: IPs, passwords, tokens (encrypted, in git)
 
   roles/
     hostname/                   # Sets server hostname to inventory name
@@ -333,7 +333,7 @@ node_agent_hawser_enabled: true   # Dockhand agent
 node_agent_bifrost_enabled: false  # WireGuard tunnel
 ```
 
-**Per-host secrets** (`host_vars/<hostname>/secret.sops.yml`):
+**Per-host secrets** (`host_vars/<hostname>/secrets.sops.yml`):
 ```yaml
 node_agent_obs_host: "10.0.20.102"           # central monitoring server IP
 node_agent_dockhand_url: "http://10.0.20.102:9000"
@@ -359,12 +359,12 @@ ansible_user: ENC[AES256_GCM,data:xYz=,iv:...,tag:...,type:str]
 ### Editing secrets
 
 ```bash
-just secret myhost         # opens in $EDITOR, auto-encrypts on save
+just secrets myhost         # opens in $EDITOR, auto-encrypts on save
 ```
 
 ### Template
 
-New hosts get secrets pre-populated from `host_vars/secret.sops.yml.tpl`:
+New hosts get secrets pre-populated from `host_vars/secrets.sops.yml.tpl`:
 
 ```yaml
 ansible_host: "CHANGEME"
@@ -466,8 +466,8 @@ just bootstrap myhost      # re-runs SSH role, restores key from BW
 The secret file wasn't created with SOPS. Delete and recreate:
 
 ```bash
-rm host_vars/myhost/secret.sops.yml
-just secret myhost
+rm host_vars/myhost/secrets.sops.yml
+just secrets myhost
 ```
 
 ### "age key not found"

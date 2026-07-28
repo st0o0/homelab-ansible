@@ -138,7 +138,7 @@ else
     echo "    Updated: $SOPS_CONFIG"
 fi
 
-# ── Step 4: Scaffold secret.sops.yml for each host ────────────────────────
+# ── Step 4: Scaffold secrets.sops.yml for each host ────────────────────────
 
 export SOPS_AGE_KEY_FILE="$AGE_KEY_FILE"
 
@@ -149,16 +149,16 @@ if [ -z "$HOSTS" ]; then
 else
     echo "==> Checking secret files for hosts: $(echo $HOSTS | tr '\n' ' ')"
     for HOST in $HOSTS; do
-        SECRET_FILE="host_vars/$HOST/secret.sops.yml"
+        SECRET_FILE="host_vars/$HOST/secrets.sops.yml"
         if [ -f "$SECRET_FILE" ]; then
-            echo "    $HOST: secret.sops.yml already exists"
+            echo "    $HOST: secrets.sops.yml already exists"
         else
             echo "    $HOST: creating from template..."
             mkdir -p "host_vars/$HOST"
-            TEMPLATE="host_vars/secret.sops.yml.tpl"
-            cp "$TEMPLATE" "/tmp/secret.sops.yml"
-            sops --encrypt --age "$PUBLIC_KEY" --input-type yaml --output-type yaml "/tmp/secret.sops.yml" > "$SECRET_FILE"
-            rm "/tmp/secret.sops.yml"
+            TEMPLATE="host_vars/secrets.sops.yml.tpl"
+            cp "$TEMPLATE" "/tmp/secrets.sops.yml"
+            sops --encrypt --age "$PUBLIC_KEY" --input-type yaml --output-type yaml "/tmp/secrets.sops.yml" > "$SECRET_FILE"
+            rm "/tmp/secrets.sops.yml"
         fi
     done
 fi
@@ -172,7 +172,7 @@ echo "    Next steps:"
 
 NEEDS_EDIT=false
 for HOST in $HOSTS; do
-    SECRET_FILE="host_vars/$HOST/secret.sops.yml"
+    SECRET_FILE="host_vars/$HOST/secrets.sops.yml"
     if sops -d "$SECRET_FILE" 2>/dev/null | grep -q "CHANGEME"; then
         NEEDS_EDIT=true
         break
@@ -182,7 +182,7 @@ done
 if [ "$NEEDS_EDIT" = true ]; then
     echo "    1. Edit secrets for each host:"
     for HOST in $HOSTS; do
-        echo "       just secret $HOST"
+        echo "       just secrets $HOST"
     done
     echo "    2. Commit: git add .sops.yaml host_vars/ && git commit -m 'feat(ansible): add SOPS-encrypted host secrets'"
     echo "    3. Test:   just ping"
