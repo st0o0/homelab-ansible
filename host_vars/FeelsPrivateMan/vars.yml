@@ -1,5 +1,5 @@
 # Bootstrap
-# hostname_enabled: true
+hostname_enabled: false
 
 # Shell
 # motd_enabled: true
@@ -11,8 +11,8 @@ unattended_upgrades_enabled: true
 #   - "docker-ce"
 #   - "docker-ce-cli"
 #   - "containerd.io"
-# unattended_upgrades_skip_reboot_required: false
-# unattended_upgrades_auto_reboot: false
+unattended_upgrades_skip_reboot_required: false
+unattended_upgrades_auto_reboot: false
 # unattended_upgrades_auto_reboot_time: "04:00"
 
 # Swap
