@@ -1,5 +1,0 @@
-- name: Bootstrap new host
-  hosts: all
-  become: true
-  roles:
-    - role: ssh

@@ -2,10 +2,10 @@
   hosts: all
   become: true
   roles:
-    - role: hostname
-      tags: [hostname]
-    - role: base
-      tags: [base]
+    - role: bootstrap
+      tags: [bootstrap]
+    - role: ssh
+      tags: [ssh, bootstrap]
     - role: swap
       tags: [swap]
     - role: unattended_upgrades
@@ -14,11 +14,11 @@
       tags: [ufw]
     - role: docker
       tags: [docker]
+    - role: ups
+      tags: [ups]
     - role: cron
       tags: [cron]
-    - role: motd
-      tags: [motd]
-    - role: dotfiles
-      tags: [dotfiles]
-    - role: node_agent
-      tags: [node_agent]
+    - role: shell
+      tags: [shell, motd, dotfiles]
+    - role: node_stack
+      tags: [node_stack]

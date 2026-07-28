@@ -1,3 +1,4 @@
+motd_enabled: true
 dotfiles_enabled: true
 dotfiles_github_user: st0o0
 dotfiles_reset_scripts: false

@@ -1,0 +1,8 @@
+bootstrap_timezone: Europe/Berlin
+bootstrap_upgrade: false
+bootstrap_packages:
+  - btop
+  - git
+  - curl
+  - ca-certificates
+  - gnupg

@@ -1,0 +1,27 @@
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  when: hostname_enabled
+
+- name: Update /etc/hosts with hostname
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1\t{{ inventory_hostname }}"
+  when: hostname_enabled
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ bootstrap_timezone }}"
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ bootstrap_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    upgrade: dist
+  when: bootstrap_upgrade

@@ -56,7 +56,7 @@ exec *ARGS:
 
 # Bootstrap a new host (first run, as root with password)
 bootstrap HOST USER="root":
-    ansible-playbook bootstrap.yml --limit {{HOST}} -e ansible_user={{USER}} -e ansible_ssh_private_key_file=~/.ssh/id_ansible --ask-pass
+    ansible-playbook run.yml --tags bootstrap --limit {{HOST}} -e ansible_user={{USER}} -e ansible_ssh_private_key_file=~/.ssh/id_ansible --ask-pass
 
 # Set up a new workstation (restore age key + SSH backup keys from Bitwarden)
 setup:
@@ -90,17 +90,17 @@ setup:
     echo ""
     echo "Done. Run 'just ping' to verify connectivity."
 
-# Converge all hosts
-run *ARGS:
-    ansible-playbook run.yml {{ARGS}}
+# Converge all hosts (optionally filter by tags)
+run TAGS="" *ARGS:
+    ansible-playbook run.yml {{ if TAGS != "" { "--tags " + TAGS } else { "" } }} {{ARGS}}
 
-# Converge a single host
-deploy HOST *ARGS:
-    ansible-playbook run.yml --limit {{HOST}} {{ARGS}}
+# Converge specific hosts (optionally filter by tags)
+deploy HOSTS TAGS="" *ARGS:
+    ansible-playbook run.yml --limit {{HOSTS}} {{ if TAGS != "" { "--tags " + TAGS } else { "" } }} {{ARGS}}
 
 # Run system updates (all hosts or single host)
 update *ARGS:
-    ansible-playbook run.yml --tags base -e base_upgrade=true {{ARGS}}
+    ansible-playbook run.yml --tags bootstrap -e bootstrap_upgrade=true --skip-tags ssh {{ARGS}}
 
 # Sync dotfiles on all hosts
 sync-dotfiles *ARGS:
@@ -309,7 +309,7 @@ rename OLD NEW:
     fi
     echo ""
     echo "Done. Apply hostname on server + commit:"
-    echo "  just deploy {{NEW}} --tags hostname"
+    echo "  just deploy {{NEW}} --tags bootstrap"
     echo "  git add -A && git commit -m 'rename: {{OLD}} → {{NEW}}'"
 
 # Lint

@@ -1,0 +1,171 @@
+# ── motd cleanup ────────────────────────────────────────────────────
+- name: Remove figlet when motd disabled
+  ansible.builtin.apt:
+    name: figlet
+    state: absent
+  when: not motd_enabled
+
+- name: Remove motd script when disabled
+  ansible.builtin.file:
+    path: /usr/local/sbin/homelab-motd
+    state: absent
+  when: not motd_enabled
+
+- name: Remove bashrc motd hook when disabled
+  ansible.builtin.blockinfile:
+    path: /etc/bash.bashrc
+    marker: "# {mark} ANSIBLE MANAGED - homelab motd"
+    state: absent
+  when: not motd_enabled
+
+# ── motd setup ──────────────────────────────────────────────────────
+- name: Install figlet
+  ansible.builtin.apt:
+    name: figlet
+    state: present
+    update_cache: true
+  when: motd_enabled
+
+- name: Clear default motd
+  ansible.builtin.copy:
+    dest: /etc/motd
+    content: ""
+    mode: "0644"
+  when: motd_enabled
+
+- name: Remove default motd scripts
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/update-motd.d/10-uname
+    - /etc/update-motd.d/10-sysinfo
+    - /etc/update-motd.d/50-motd-news
+    - /etc/update-motd.d/90-updates-available
+    - /etc/update-motd.d/91-release-upgrade
+    - /etc/update-motd.d/92-unattended-upgrades
+    - /etc/update-motd.d/10-homelab
+  failed_when: false
+  when: motd_enabled
+
+- name: Deploy custom motd script
+  ansible.builtin.template:
+    src: motd.sh.j2
+    dest: /usr/local/sbin/homelab-motd
+    mode: "0755"
+  when: motd_enabled
+
+- name: Disable PAM dynamic motd
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: '^(\s*session\s+optional\s+pam_motd\.so)'
+    state: absent
+  when: motd_enabled
+
+- name: Print homelab-motd from every interactive bash shell
+  ansible.builtin.blockinfile:
+    path: /etc/bash.bashrc
+    marker: "# {mark} ANSIBLE MANAGED - homelab motd"
+    block: |
+      if [ -n "$SSH_CONNECTION" ] && [[ $- == *i* ]]; then
+          /usr/local/sbin/homelab-motd
+      fi
+  when: motd_enabled
+
+# ── dotfiles cleanup ────────────────────────────────────────────────
+- name: Remove chezmoi binary when dotfiles disabled
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.local/bin/chezmoi"
+    state: absent
+  when: not dotfiles_enabled
+
+- name: Remove chezmoi source directory when disabled
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.local/share/chezmoi"
+    state: absent
+  when: not dotfiles_enabled
+
+- name: Remove chezmoi config directory when disabled
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.config/chezmoi"
+    state: absent
+  when: not dotfiles_enabled
+
+- name: Reset login shell to bash when dotfiles disabled
+  ansible.builtin.user:
+    name: "{{ ssh_user }}"
+    shell: /bin/bash
+  when: not dotfiles_enabled
+
+# ── dotfiles setup ──────────────────────────────────────────────────
+- name: Install shell toolchain
+  ansible.builtin.apt:
+    name: [zsh, tmux]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: dotfiles_enabled
+
+- name: Set login shell to zsh
+  ansible.builtin.user:
+    name: "{{ ssh_user }}"
+    shell: /usr/bin/zsh
+  when: dotfiles_enabled
+
+- name: Install chezmoi
+  ansible.builtin.shell: |
+    set -o pipefail
+    SCRIPT="$(curl -fsLS get.chezmoi.io)" || exit 1
+    sh -c "${SCRIPT}" -- -b "${HOME}/.local/bin"
+  args:
+    executable: /bin/bash
+    creates: "/home/{{ ssh_user }}/.local/bin/chezmoi"
+  become: true
+  become_user: "{{ ssh_user }}"
+  when: dotfiles_enabled
+
+- name: Create chezmoi config directory
+  ansible.builtin.file:
+    path: "/home/{{ ssh_user }}/.config/chezmoi"
+    state: directory
+    owner: "{{ ssh_user }}"
+    mode: "0755"
+  when: dotfiles_enabled
+
+- name: Write chezmoi configuration
+  ansible.builtin.copy:
+    dest: "/home/{{ ssh_user }}/.config/chezmoi/chezmoi.toml"
+    content: |
+      [data]
+          profile = "server"
+    owner: "{{ ssh_user }}"
+    mode: "0644"
+  when: dotfiles_enabled
+
+- name: Check if chezmoi is initialized
+  ansible.builtin.stat:
+    path: "/home/{{ ssh_user }}/.local/share/chezmoi/.git"
+  register: _chezmoi_source
+  when: dotfiles_enabled
+
+- name: Initialize dotfiles (first run)
+  ansible.builtin.command:
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi init --apply --force {{ dotfiles_github_user }}
+  become: true
+  become_user: "{{ ssh_user }}"
+  when: dotfiles_enabled and not _chezmoi_source.stat.exists
+
+- name: Reset chezmoi script state (re-run run_once scripts)
+  ansible.builtin.command:
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi state delete-bucket --bucket=scriptState
+  become: true
+  become_user: "{{ ssh_user }}"
+  when: dotfiles_enabled and (dotfiles_reset_scripts | bool)
+
+- name: Update dotfiles (subsequent runs)
+  ansible.builtin.command:
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi update --force
+  become: true
+  become_user: "{{ ssh_user }}"
+  changed_when: false
+  when: dotfiles_enabled and _chezmoi_source.stat.exists
