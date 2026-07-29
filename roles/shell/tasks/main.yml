@@ -187,3 +187,8 @@
   changed_when: _chezmoi_status.stdout | length > 0
   when: dotfiles_enabled and _chezmoi_source.stat.exists
   notify: Apply chezmoi dotfiles
+
+- name: Show pending dotfile changes
+  ansible.builtin.debug:
+    msg: "{{ _chezmoi_status.stdout_lines }}"
+  when: dotfiles_enabled and _chezmoi_source.stat.exists and _chezmoi_status.stdout | length > 0
