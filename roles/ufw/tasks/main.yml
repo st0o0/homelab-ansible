@@ -2,7 +2,7 @@
   community.general.ufw:
     state: disabled
   failed_when: false
-  when: not ufw_enabled and not ansible_check_mode
+  when: not ufw_enabled
 
 - name: Skip if ufw disabled
   ansible.builtin.meta: end_role
@@ -19,13 +19,11 @@
   community.general.ufw:
     direction: incoming
     default: "{{ ufw_default_incoming }}"
-  when: not ansible_check_mode
 
 - name: Set default outgoing policy
   community.general.ufw:
     direction: outgoing
     default: "{{ ufw_default_outgoing }}"
-  when: not ansible_check_mode
 
 - name: Apply default rules
   community.general.ufw:
@@ -34,9 +32,7 @@
     proto: "{{ item.proto | default('tcp') }}"
     comment: "{{ item.comment | default(omit) }}"
   loop: "{{ ufw_rules + ufw_extra_rules }}"
-  when: not ansible_check_mode
 
 - name: Enable ufw
   community.general.ufw:
     state: enabled
-  when: not ansible_check_mode

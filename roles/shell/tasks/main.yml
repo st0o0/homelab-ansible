@@ -24,6 +24,7 @@
     name: figlet
     state: present
     update_cache: true
+    cache_valid_time: 3600
   when: motd_enabled
 
 - name: Clear default motd
@@ -141,6 +142,7 @@
     owner: "{{ ssh_user }}"
     mode: "0644"
   when: dotfiles_enabled
+  notify: Apply chezmoi dotfiles
 
 - name: Check if chezmoi is initialized
   ansible.builtin.stat:
@@ -153,19 +155,35 @@
     cmd: /home/{{ ssh_user }}/.local/bin/chezmoi init --apply --force {{ dotfiles_github_user }}
   become: true
   become_user: "{{ ssh_user }}"
-  when: dotfiles_enabled and not _chezmoi_source.stat.exists and not ansible_check_mode
+  check_mode: false
+  when: dotfiles_enabled and not _chezmoi_source.stat.exists
 
 - name: Reset chezmoi script state (re-run run_once scripts)
   ansible.builtin.command:
     cmd: /home/{{ ssh_user }}/.local/bin/chezmoi state delete-bucket --bucket=scriptState
   become: true
   become_user: "{{ ssh_user }}"
-  when: dotfiles_enabled and (dotfiles_reset_scripts | bool) and not ansible_check_mode
+  check_mode: false
+  changed_when: true
+  when: dotfiles_enabled and (dotfiles_reset_scripts | bool)
+  notify: Apply chezmoi dotfiles
 
-- name: Update dotfiles (subsequent runs)
+- name: Pull latest dotfiles from remote
   ansible.builtin.command:
-    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi update --force
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi git -- pull
   become: true
   become_user: "{{ ssh_user }}"
+  check_mode: false
   changed_when: false
-  when: dotfiles_enabled and _chezmoi_source.stat.exists and not ansible_check_mode
+  when: dotfiles_enabled and _chezmoi_source.stat.exists
+
+- name: Check for pending dotfile changes
+  ansible.builtin.command:
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi status
+  become: true
+  become_user: "{{ ssh_user }}"
+  register: _chezmoi_status
+  check_mode: false
+  changed_when: _chezmoi_status.stdout | length > 0
+  when: dotfiles_enabled and _chezmoi_source.stat.exists
+  notify: Apply chezmoi dotfiles

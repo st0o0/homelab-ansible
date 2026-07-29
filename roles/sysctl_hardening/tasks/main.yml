@@ -2,11 +2,10 @@
   ansible.builtin.meta: end_role
   when: not sysctl_hardening_enabled
 
-- name: Apply hardened sysctl settings
-  ansible.posix.sysctl:
-    name: "{{ item.key }}"
-    value: "{{ item.value }}"
-    state: present
-    sysctl_set: true
-    reload: true
-  loop: "{{ sysctl_hardening_settings | dict2items }}"
+- name: Deploy hardened sysctl settings
+  ansible.builtin.template:
+    src: hardening.conf.j2
+    dest: /etc/sysctl.d/99-hardening.conf
+    owner: root
+    mode: "0644"
+  notify: Reload sysctl settings

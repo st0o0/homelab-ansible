@@ -1,0 +1,6 @@
+- name: Apply chezmoi dotfiles
+  ansible.builtin.command:
+    cmd: /home/{{ ssh_user }}/.local/bin/chezmoi apply --force
+  become: true
+  become_user: "{{ ssh_user }}"
+  ignore_errors: "{{ ansible_check_mode }}"

@@ -3,7 +3,8 @@
     cmd: "swapoff {{ swap_path }}"
   failed_when: false
   changed_when: false
-  when: not swap_enabled and not ansible_check_mode
+  check_mode: false
+  when: not swap_enabled
 
 - name: Remove swapfile from fstab when disabled
   ansible.builtin.lineinfile:
@@ -38,7 +39,8 @@
 - name: Create swapfile
   ansible.builtin.command:
     cmd: "fallocate -l {{ swap_size }} {{ swap_path }}"
-  when: not _swap_file.stat.exists and not ansible_check_mode
+  check_mode: false
+  when: not _swap_file.stat.exists
   changed_when: true
 
 - name: Set swapfile permissions
@@ -51,13 +53,15 @@
 - name: Format swapfile
   ansible.builtin.command:
     cmd: "mkswap {{ swap_path }}"
-  when: not _swap_file.stat.exists and not ansible_check_mode
+  check_mode: false
+  when: not _swap_file.stat.exists
   changed_when: true
 
 - name: Enable swapfile
   ansible.builtin.command:
     cmd: "swapon {{ swap_path }}"
-  when: not _swap_file.stat.exists and not ansible_check_mode
+  check_mode: false
+  when: not _swap_file.stat.exists
   changed_when: true
 
 - name: Add swapfile to fstab

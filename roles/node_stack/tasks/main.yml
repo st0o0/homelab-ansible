@@ -13,15 +13,13 @@
   when: not _node_stack_any_enabled
 
 - name: Stop node-stack when disabled
-  ansible.builtin.command:
-    cmd: docker compose down --remove-orphans
-    chdir: "{{ node_stack_deploy_path }}"
-  register: _node_stack_down_disable
-  failed_when: false
-  changed_when: _node_stack_down_disable.rc == 0
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_stack_deploy_path }}"
+    state: absent
+    remove_orphans: true
+  check_mode: false
   when:
     - not _node_stack_any_enabled
-    - not ansible_check_mode
     - _node_stack_dir_teardown.stat.exists
 
 - name: Remove node-stack deploy directory when disabled
@@ -46,23 +44,6 @@
     fail_msg: >-
       node_stack requires Docker. Run the docker role first
       (e.g. `just deploy <host>`, or `--tags docker,node_stack`).
-
-# ── Stop running stack ──────────────────────────────────────────────
-- name: Check if deploy directory exists
-  ansible.builtin.stat:
-    path: "{{ node_stack_deploy_path }}"
-  register: _node_stack_dir
-
-- name: Stop node-stack before changes
-  ansible.builtin.command:
-    cmd: docker compose down --remove-orphans
-    chdir: "{{ node_stack_deploy_path }}"
-  register: _node_stack_down
-  failed_when: false
-  changed_when: _node_stack_down.rc == 0
-  when:
-    - _node_stack_dir.stat.exists
-    - not ansible_check_mode
 
 # ── Directories ─────────────────────────────────────────────────────
 - name: Create stack directories
@@ -207,18 +188,10 @@
     mode: "0600"
   notify: Restart node-stack
 
-# ── Start ───────────────────────────────────────────────────────────
-- name: Check deploy directory before start
-  ansible.builtin.stat:
-    path: "{{ node_stack_deploy_path }}"
-  register: _node_stack_dir_start
-
-- name: Start node-stack
-  ansible.builtin.command:
-    cmd: docker compose up -d --remove-orphans
-    chdir: "{{ node_stack_deploy_path }}"
-  register: _node_stack_up
-  changed_when: "'Started' in _node_stack_up.stderr or 'Creating' in _node_stack_up.stderr"
-  when:
-    - _node_stack_dir_start.stat.exists
-    - not ansible_check_mode
+# ── Ensure running ─────────────────────────────────────────────────
+- name: Ensure node-stack is running
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_stack_deploy_path }}"
+    state: present
+    remove_orphans: true
+  ignore_errors: "{{ ansible_check_mode }}"
