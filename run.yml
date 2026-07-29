@@ -34,5 +34,7 @@
       tags: [lynis]
     - role: shell
       tags: [shell, motd, dotfiles]
-    - role: node_stack
-      tags: [node_stack]
+    - role: bifrost
+      tags: [bifrost]
+    - role: hawser
+      tags: [hawser]

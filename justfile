@@ -76,7 +76,8 @@ tags:
     clamav               Malware scanning (daily cron)
     lynis                Security audit report (weekly cron)
     shell                MOTD, chezmoi dotfiles, shell config (← ssh)
-    node_stack           Docker Compose service stack: Alloy, Hawser, UPS, Backrest, Bifrost (← docker)
+    bifrost              WireGuard tunnel + CNAF sidecar (← docker)
+    hawser               Dockhand edge agent, optional Bifrost network (← docker)
 
     Usage:
       just deploy HOST --tags TAG[,TAG]     Deploy specific tags to a host
