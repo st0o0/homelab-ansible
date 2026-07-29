@@ -1,3 +1,24 @@
+# ── Migrate from old node-stack path ─────────────────────────────────
+- name: Check if legacy node-stack directory exists
+  ansible.builtin.stat:
+    path: /docker/node-stack
+  register: _hawser_legacy_dir
+
+- name: Stop legacy node-stack
+  community.docker.docker_compose_v2:
+    project_src: /docker/node-stack
+    state: absent
+    remove_orphans: true
+  when: _hawser_legacy_dir.stat.exists
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Remove legacy node-stack directory
+  ansible.builtin.file:
+    path: /docker/node-stack
+    state: absent
+  when: _hawser_legacy_dir.stat.exists
+
+# ── Teardown (disabled) ─────────────────────────────────────────────
 - name: Check if deploy directory exists (teardown)
   ansible.builtin.stat:
     path: "{{ hawser_deploy_path }}"
