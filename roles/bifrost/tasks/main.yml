@@ -1,0 +1,73 @@
+- name: Check if deploy directory exists (teardown)
+  ansible.builtin.stat:
+    path: "{{ bifrost_deploy_path }}"
+  register: _bifrost_dir_teardown
+  when: not hawser_bifrost
+
+- name: Stop bifrost when disabled
+  community.docker.docker_compose_v2:
+    project_src: "{{ bifrost_deploy_path }}"
+    state: absent
+    remove_orphans: true
+  check_mode: false
+  when:
+    - not hawser_bifrost
+    - _bifrost_dir_teardown.stat.exists
+
+- name: Remove bifrost deploy directory when disabled
+  ansible.builtin.file:
+    path: "{{ bifrost_deploy_path }}"
+    state: absent
+  when: not hawser_bifrost
+
+- name: Skip bifrost if disabled
+  ansible.builtin.meta: end_role
+  when: not hawser_bifrost
+
+# ── Prechecks ───────────────────────────────────────────────────────
+- name: Check Docker is installed
+  ansible.builtin.stat:
+    path: /usr/bin/docker
+  register: _bifrost_docker_bin
+
+- name: Fail if Docker isn't installed
+  ansible.builtin.assert:
+    that: _bifrost_docker_bin.stat.exists
+    fail_msg: >-
+      bifrost requires Docker. Run the docker role first
+      (e.g. `just deploy <host>`, or `--tags docker,bifrost`).
+
+# ── Deploy ──────────────────────────────────────────────────────────
+- name: Create deploy directory
+  ansible.builtin.file:
+    path: "{{ bifrost_deploy_path }}"
+    state: directory
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0755"
+
+- name: Deploy compose file
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ bifrost_deploy_path }}/compose.yml"
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0644"
+  notify: Restart bifrost
+
+- name: Deploy environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ bifrost_deploy_path }}/.env"
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0600"
+  notify: Restart bifrost
+
+# ── Ensure running ─────────────────────────────────────────────────
+- name: Ensure bifrost is running
+  community.docker.docker_compose_v2:
+    project_src: "{{ bifrost_deploy_path }}"
+    state: present
+    remove_orphans: true
+  ignore_errors: "{{ ansible_check_mode }}"
