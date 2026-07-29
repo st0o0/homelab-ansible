@@ -1,0 +1,41 @@
+- name: Remove rkhunter cron job when disabled
+  ansible.builtin.cron:
+    name: "rkhunter-scan"
+    state: absent
+  when: not rkhunter_enabled
+
+- name: Remove rkhunter package when disabled
+  ansible.builtin.apt:
+    name: rkhunter
+    state: absent
+    purge: true
+  when: not rkhunter_enabled
+
+- name: Skip if rkhunter disabled
+  ansible.builtin.meta: end_role
+  when: not rkhunter_enabled
+
+- name: Install rkhunter
+  ansible.builtin.apt:
+    name: rkhunter
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Build initial rkhunter file properties baseline
+  ansible.builtin.command:
+    cmd: rkhunter --propupd
+  args:
+    creates: /var/lib/rkhunter/db/mtimes.dat
+
+- name: Schedule rkhunter scan
+  ansible.builtin.cron:
+    name: "rkhunter-scan"
+    job: "rkhunter --check --sk --report-warnings-only >> /var/log/rkhunter-cron.log 2>&1"
+    minute: "{{ rkhunter_schedule.split()[0] }}"
+    hour: "{{ rkhunter_schedule.split()[1] }}"
+    day: "{{ rkhunter_schedule.split()[2] }}"
+    month: "{{ rkhunter_schedule.split()[3] }}"
+    weekday: "{{ rkhunter_schedule.split()[4] }}"
+    user: root
+    state: present

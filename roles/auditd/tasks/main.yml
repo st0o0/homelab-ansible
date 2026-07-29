@@ -1,0 +1,42 @@
+- name: Stop and disable auditd when disabled
+  ansible.builtin.service:
+    name: auditd
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not auditd_enabled
+
+- name: Remove auditd packages when disabled
+  ansible.builtin.apt:
+    name:
+      - auditd
+      - audispd-plugins
+    state: absent
+    purge: true
+  when: not auditd_enabled
+
+- name: Skip if auditd disabled
+  ansible.builtin.meta: end_role
+  when: not auditd_enabled
+
+- name: Install auditd
+  ansible.builtin.apt:
+    name:
+      - auditd
+      - audispd-plugins
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Deploy audit rules
+  ansible.builtin.template:
+    src: hardening.rules.j2
+    dest: /etc/audit/rules.d/hardening.rules
+    mode: "0640"
+  notify: Restart auditd
+
+- name: Enable and start auditd
+  ansible.builtin.service:
+    name: auditd
+    enabled: true
+    state: started

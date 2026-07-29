@@ -1,0 +1,70 @@
+- name: Remove lynis cron job when disabled
+  ansible.builtin.cron:
+    name: "lynis-audit"
+    state: absent
+  when: not lynis_enabled
+
+- name: Remove lynis package when disabled
+  ansible.builtin.apt:
+    name: lynis
+    state: absent
+    purge: true
+  when: not lynis_enabled
+
+- name: Remove CISOfy apt repository when disabled
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by={{ lynis_apt_key_dest }}]
+      https://packages.cisofy.com/community/lynis/deb/ stable main
+    filename: cisofy-lynis
+    state: absent
+  when: not lynis_enabled
+
+- name: Remove CISOfy apt key when disabled
+  ansible.builtin.file:
+    path: "{{ lynis_apt_key_dest }}"
+    state: absent
+  when: not lynis_enabled
+
+- name: Skip if lynis disabled
+  ansible.builtin.meta: end_role
+  when: not lynis_enabled
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add CISOfy apt key
+  ansible.builtin.get_url:
+    url: "{{ lynis_apt_key_url }}"
+    dest: "{{ lynis_apt_key_dest }}"
+    mode: "0644"
+
+- name: Add CISOfy apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by={{ lynis_apt_key_dest }}]
+      https://packages.cisofy.com/community/lynis/deb/ stable main
+    filename: cisofy-lynis
+    state: present
+
+- name: Install lynis
+  ansible.builtin.apt:
+    name: lynis
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Schedule lynis audit
+  ansible.builtin.cron:
+    name: "lynis-audit"
+    job: "lynis audit system --cronjob > /var/log/lynis.log 2>&1"
+    minute: "{{ lynis_schedule.split()[0] }}"
+    hour: "{{ lynis_schedule.split()[1] }}"
+    day: "{{ lynis_schedule.split()[2] }}"
+    month: "{{ lynis_schedule.split()[3] }}"
+    weekday: "{{ lynis_schedule.split()[4] }}"
+    user: root
+    state: present

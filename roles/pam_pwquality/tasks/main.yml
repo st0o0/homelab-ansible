@@ -1,0 +1,23 @@
+- name: Remove pam_pwquality package when disabled
+  ansible.builtin.apt:
+    name: libpam-pwquality
+    state: absent
+    purge: true
+  when: not pam_pwquality_enabled
+
+- name: Skip if pam_pwquality disabled
+  ansible.builtin.meta: end_role
+  when: not pam_pwquality_enabled
+
+- name: Install libpam-pwquality
+  ansible.builtin.apt:
+    name: libpam-pwquality
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Deploy pwquality config
+  ansible.builtin.template:
+    src: pwquality.conf.j2
+    dest: /etc/security/pwquality.conf
+    mode: "0644"

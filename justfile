@@ -23,7 +23,7 @@ down:
 
 [windows]
 down:
-    docker stop $(docker ps -q --filter "label=devcontainer.local_folder=$PWD")
+    $p = $PWD.Path[0].ToString().ToLower() + $PWD.Path.Substring(1); $cid = docker ps -q --filter "label=devcontainer.local_folder=$p"; if ($cid) { docker stop $cid } else { Write-Host "No running devcontainer found." }
 
 # Remove + rebuild the dev container from scratch (--no-cache)
 [unix]
@@ -53,6 +53,36 @@ exec *ARGS:
     devcontainer exec --workspace-folder . --config .devcontainer/{{variant}}/devcontainer.json {{ARGS}}
 
 # --- Ansible ---
+
+# Show available deploy tags with descriptions
+tags:
+    #!/usr/bin/env bash
+    cat <<'EOF'
+    Tag                  Description
+    ───                  ───────────
+    bootstrap            First-run setup: hostname, timezone, base packages (+ ssh)
+    ssh                  SSH hardening, deploy user, backup keys (via Bitwarden)
+    swap                 Swap file management (create/remove)
+    unattended_upgrades  Automatic security updates
+    ufw                  Firewall rules (UFW)
+    fail2ban             Ban IPs after repeated failed SSH logins
+    auditd               Audit logging for identity/sudoers/ssh/cron changes
+    sysctl_hardening     Kernel network hardening (sysctl)
+    pam_pwquality        Password quality enforcement (PAM)
+    docker               Docker Engine install, user setup (← bootstrap)
+    ups                  NUT UPS client monitoring
+    cron                 Cron jobs: docker prune, custom jobs (← docker)
+    rkhunter             Rootkit scanning (daily cron)
+    clamav               Malware scanning (daily cron)
+    lynis                Security audit report (weekly cron)
+    shell                MOTD, chezmoi dotfiles, shell config (← ssh)
+    node_stack           Docker Compose service stack: Alloy, Hawser, UPS, Backrest, Bifrost (← docker)
+
+    Usage:
+      just deploy HOST --tags TAG[,TAG]     Deploy specific tags to a host
+      just deploy HOST --check              Dry-run on a host
+      just run TAG                          Run a tag across all hosts
+    EOF
 
 # Bootstrap a new host (first run, as root with password)
 bootstrap HOST USER="root":
@@ -95,8 +125,8 @@ run TAGS="" *ARGS:
     ansible-playbook run.yml {{ if TAGS != "" { "--tags " + TAGS } else { "" } }} {{ARGS}}
 
 # Converge specific hosts (optionally filter by tags)
-deploy HOSTS TAGS="" *ARGS:
-    ansible-playbook run.yml --limit {{HOSTS}} {{ if TAGS != "" { "--tags " + TAGS } else { "" } }} {{ARGS}}
+deploy HOSTS *ARGS:
+    ansible-playbook run.yml --limit {{HOSTS}} {{ARGS}}
 
 # Run system updates (all hosts or single host)
 update *ARGS:

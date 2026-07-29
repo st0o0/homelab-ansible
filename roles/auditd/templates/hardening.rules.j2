@@ -1,0 +1,4 @@
+## Managed by Ansible -- do not edit manually.
+{% for rule in auditd_rules + auditd_extra_rules %}
+{{ rule }}
+{% endfor %}

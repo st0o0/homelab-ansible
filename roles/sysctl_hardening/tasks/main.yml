@@ -1,0 +1,12 @@
+- name: Skip if sysctl hardening disabled
+  ansible.builtin.meta: end_role
+  when: not sysctl_hardening_enabled
+
+- name: Apply hardened sysctl settings
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_set: true
+    reload: true
+  loop: "{{ sysctl_hardening_settings | dict2items }}"

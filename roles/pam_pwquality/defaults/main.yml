@@ -1,0 +1,7 @@
+pam_pwquality_enabled: true
+pam_pwquality_settings:
+  minlen: 12
+  minclass: 3
+  maxrepeat: 3
+  dictcheck: 1
+  enforce_for_root: true

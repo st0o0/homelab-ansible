@@ -1,0 +1,8 @@
+# Managed by Ansible -- do not edit manually.
+minlen = {{ pam_pwquality_settings.minlen }}
+minclass = {{ pam_pwquality_settings.minclass }}
+maxrepeat = {{ pam_pwquality_settings.maxrepeat }}
+dictcheck = {{ pam_pwquality_settings.dictcheck }}
+{% if pam_pwquality_settings.enforce_for_root %}
+enforce_for_root
+{% endif %}

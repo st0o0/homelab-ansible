@@ -1,0 +1,64 @@
+- name: Remove clamav cron job when disabled
+  ansible.builtin.cron:
+    name: "clamav-scan"
+    state: absent
+  when: not clamav_enabled
+
+- name: Stop and disable clamav-freshclam when disabled
+  ansible.builtin.service:
+    name: clamav-freshclam
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not clamav_enabled
+
+- name: Remove clamav packages when disabled
+  ansible.builtin.apt:
+    name:
+      - clamav
+      - clamav-daemon
+    state: absent
+    purge: true
+  when: not clamav_enabled
+
+- name: Skip if clamav disabled
+  ansible.builtin.meta: end_role
+  when: not clamav_enabled
+
+- name: Install clamav
+  ansible.builtin.apt:
+    name:
+      - clamav
+      - clamav-daemon
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable and start clamav-freshclam
+  ansible.builtin.service:
+    name: clamav-freshclam
+    enabled: true
+    state: started
+
+- name: Ensure clamav log directory exists
+  ansible.builtin.file:
+    path: /var/log/clamav
+    state: directory
+    mode: "0755"
+
+- name: Build exclude-dir arguments
+  ansible.builtin.set_fact:
+    _clamav_excludes: >-
+      {{ clamav_exclude_dirs | map('regex_replace', '^(.*)$', '--exclude-dir=\"^\\1\"') | join(' ') }}
+
+- name: Schedule clamav scan
+  ansible.builtin.cron:
+    name: "clamav-scan"
+    job: "clamscan -r / {{ _clamav_excludes }} -i >> /var/log/clamav/scan.log 2>&1"
+    minute: "{{ clamav_schedule.split()[0] }}"
+    hour: "{{ clamav_schedule.split()[1] }}"
+    day: "{{ clamav_schedule.split()[2] }}"
+    month: "{{ clamav_schedule.split()[3] }}"
+    weekday: "{{ clamav_schedule.split()[4] }}"
+    user: root
+    state: present

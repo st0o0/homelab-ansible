@@ -3,21 +3,35 @@
   become: true
   roles:
     - role: bootstrap
-      tags: [bootstrap]
+      tags: [bootstrap, never]
     - role: ssh
-      tags: [ssh, bootstrap]
+      tags: [ssh, bootstrap, never]
     - role: swap
       tags: [swap]
     - role: unattended_upgrades
       tags: [unattended_upgrades]
     - role: ufw
       tags: [ufw]
+    - role: fail2ban
+      tags: [fail2ban]
+    - role: auditd
+      tags: [auditd]
+    - role: sysctl_hardening
+      tags: [sysctl_hardening]
+    - role: pam_pwquality
+      tags: [pam_pwquality]
     - role: docker
       tags: [docker]
     - role: ups
       tags: [ups]
     - role: cron
       tags: [cron]
+    - role: rkhunter
+      tags: [rkhunter]
+    - role: clamav
+      tags: [clamav]
+    - role: lynis
+      tags: [lynis]
     - role: shell
       tags: [shell, motd, dotfiles]
     - role: node_stack

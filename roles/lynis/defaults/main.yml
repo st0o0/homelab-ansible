@@ -1,0 +1,4 @@
+lynis_enabled: true
+lynis_schedule: "0 5 * * 0"
+lynis_apt_key_url: "https://packages.cisofy.com/keys/cisofy-software-public.key"
+lynis_apt_key_dest: /etc/apt/keyrings/cisofy-lynis.asc

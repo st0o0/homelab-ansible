@@ -1,0 +1,11 @@
+fail2ban_enabled: true
+fail2ban_jails:
+  - name: sshd
+    enabled: true
+    port: ssh
+    filter: sshd
+    logpath: /var/log/auth.log
+    maxretry: 5
+    findtime: 10m
+    bantime: 1h
+fail2ban_extra_jails: []

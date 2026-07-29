@@ -1,0 +1,6 @@
+clamav_enabled: true
+clamav_schedule: "0 3 * * *"
+clamav_exclude_dirs:
+  - /sys
+  - /proc
+  - /dev

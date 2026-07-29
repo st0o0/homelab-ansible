@@ -1,0 +1,12 @@
+# Managed by Ansible -- do not edit manually.
+{% for jail in fail2ban_jails + fail2ban_extra_jails %}
+[{{ jail.name }}]
+enabled = {{ jail.enabled | default(true) | lower }}
+port = {{ jail.port }}
+filter = {{ jail.filter }}
+logpath = {{ jail.logpath }}
+maxretry = {{ jail.maxretry | default(5) }}
+findtime = {{ jail.findtime | default('10m') }}
+bantime = {{ jail.bantime | default('1h') }}
+
+{% endfor %}
