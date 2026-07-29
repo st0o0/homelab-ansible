@@ -153,14 +153,14 @@
     cmd: /home/{{ ssh_user }}/.local/bin/chezmoi init --apply --force {{ dotfiles_github_user }}
   become: true
   become_user: "{{ ssh_user }}"
-  when: dotfiles_enabled and not _chezmoi_source.stat.exists
+  when: dotfiles_enabled and not _chezmoi_source.stat.exists and not ansible_check_mode
 
 - name: Reset chezmoi script state (re-run run_once scripts)
   ansible.builtin.command:
     cmd: /home/{{ ssh_user }}/.local/bin/chezmoi state delete-bucket --bucket=scriptState
   become: true
   become_user: "{{ ssh_user }}"
-  when: dotfiles_enabled and (dotfiles_reset_scripts | bool)
+  when: dotfiles_enabled and (dotfiles_reset_scripts | bool) and not ansible_check_mode
 
 - name: Update dotfiles (subsequent runs)
   ansible.builtin.command:
@@ -168,4 +168,4 @@
   become: true
   become_user: "{{ ssh_user }}"
   changed_when: false
-  when: dotfiles_enabled and _chezmoi_source.stat.exists
+  when: dotfiles_enabled and _chezmoi_source.stat.exists and not ansible_check_mode
