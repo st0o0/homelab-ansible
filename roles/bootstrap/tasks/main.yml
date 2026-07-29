@@ -1,14 +1,14 @@
 - name: Set hostname
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
-  when: hostname_enabled
+  when: bootstrap_hostname_enabled
 
 - name: Update /etc/hosts with hostname
   ansible.builtin.lineinfile:
     path: /etc/hosts
     regexp: '^127\.0\.1\.1'
     line: "127.0.1.1\t{{ inventory_hostname }}"
-  when: hostname_enabled
+  when: bootstrap_hostname_enabled
 
 - name: Set timezone
   community.general.timezone:

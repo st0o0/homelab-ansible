@@ -1,9 +1,9 @@
 # Bootstrap
-# hostname_enabled: true
+# bootstrap_hostname_enabled: true
 
 # Shell
-motd_enabled: true
-dotfiles_enabled: true
+shell_motd_enabled: true
+shell_dotfiles_enabled: true
 
 # Unattended upgrades
 unattended_upgrades_enabled: true
@@ -57,9 +57,6 @@ cron_docker_prune: true
 # lynis_enabled: true
 # lynis_schedule: "0 5 * * 0"
 
-# Node agent
-node_stack_alloy_enabled: false
-node_stack_hawser_enabled: true
-node_stack_bifrost_enabled: false
-node_stack_backrest_enabled: false
-# node_stack_backrest_port: 9898
+# Hawser (Dockhand agent)
+hawser_enabled: true
+hawser_bifrost: false

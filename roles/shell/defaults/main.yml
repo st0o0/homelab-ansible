@@ -1,4 +1,4 @@
-motd_enabled: true
-dotfiles_enabled: true
-dotfiles_github_user: st0o0
-dotfiles_reset_scripts: false
+shell_motd_enabled: true
+shell_dotfiles_enabled: true
+shell_dotfiles_github_user: st0o0
+shell_dotfiles_reset_scripts: false

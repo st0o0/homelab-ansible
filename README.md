@@ -300,7 +300,7 @@ Scheduled maintenance tasks. Docker system prune runs weekly by default.
 Colored login banner showing hostname (as ASCII art via figlet), OS, kernel, IPs, Docker containers, performance bars (load, memory, disk with color-coded thresholds), and available config tools (armbian-config, raspi-config, nmtui).
 
 **Variables** (`host_vars/<hostname>/vars.yml`):
-- `motd_enabled` — default: `true`
+- `shell_motd_enabled` — default: `true`
 
 ### dotfiles
 
@@ -313,8 +313,8 @@ On subsequent converges, `chezmoi update --force` pulls and applies
 the latest dotfiles.
 
 **Variables** (`roles/dotfiles/defaults/main.yml`):
-- `dotfiles_enabled` — default: `true`
-- `dotfiles_github_user` — default: `st0o0`
+- `shell_dotfiles_enabled` — default: `true`
+- `shell_dotfiles_github_user` — default: `st0o0`
 
 ### node_agent
 
