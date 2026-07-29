@@ -5,5 +5,3 @@ bootstrap_packages:
   - btop
   - git
   - curl
-  - ca-certificates
-  - gnupg

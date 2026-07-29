@@ -49,6 +49,15 @@
          else 'amd64' if ansible_architecture == 'x86_64'
          else ansible_architecture }}
 
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
 - name: Create keyrings directory
   ansible.builtin.file:
     path: /etc/apt/keyrings
@@ -122,3 +131,4 @@
   become: true
   become_user: "{{ docker_user }}"
   changed_when: false
+  when: not ansible_check_mode
