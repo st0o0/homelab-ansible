@@ -207,14 +207,11 @@
 - name: Deploy authorized keys
   ansible.posix.authorized_key:
     user: "{{ ssh_user }}"
-    key: "{{ item }}"
+    key: "{{ _ssh_all | join('\n') }}"
     path: "/home/{{ ssh_user }}/.ssh/authorized_keys"
     manage_dir: true
-    exclusive: "{{ ssh_exclusive and ansible_loop.first }}"
+    exclusive: "{{ ssh_exclusive }}"
     state: present
-  loop: "{{ _ssh_all }}"
-  loop_control:
-    extended: true
 
 - name: Deploy sshd hardening config
   ansible.builtin.copy:
