@@ -308,6 +308,15 @@ rename OLD NEW:
             echo "  ✓ $(basename "$f") → $(basename "$NEW_F")"
         fi
     done
+    # Fix public key comment
+    NEW_KEY="$HOME/.ssh/id_backup_{{NEW}}"
+    if [ -f "$NEW_KEY" ]; then
+        DERIVED=$(ssh-keygen -y -f "$NEW_KEY")
+        ALGO=$(echo "$DERIVED" | awk '{print $1}')
+        DATA=$(echo "$DERIVED" | awk '{print $2}')
+        echo "$ALGO $DATA backup-{{NEW}}" > "$NEW_KEY.pub"
+        echo "  ✓ public key comment set to backup-{{NEW}}"
+    fi
     # SSH config — remove old, add new
     if [ -f "$HOME/.ssh/config" ]; then
         sed -i '/# BEGIN ANSIBLE MANAGED - {{OLD}}/,/# END ANSIBLE MANAGED - {{OLD}}/d' "$HOME/.ssh/config"
@@ -341,6 +350,32 @@ rename OLD NEW:
     echo "Done. Apply hostname on server + commit:"
     echo "  just deploy {{NEW}} --tags bootstrap"
     echo "  git add -A && git commit -m 'rename: {{OLD}} → {{NEW}}'"
+
+# Fix SSH public-key comments to match 'backup-<hostname>'
+localsshrename:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HOSTS=$(ansible-inventory --list 2>/dev/null | jq -r '._meta.hostvars | keys[]')
+    for HOST in $HOSTS; do
+        KEY="$HOME/.ssh/id_backup_$HOST"
+        PUB="$KEY.pub"
+        if [ ! -f "$KEY" ]; then
+            continue
+        fi
+        DERIVED=$(ssh-keygen -y -f "$KEY")
+        ALGO=$(echo "$DERIVED" | awk '{print $1}')
+        DATA=$(echo "$DERIVED" | awk '{print $2}')
+        NEW_LINE="$ALGO $DATA backup-$HOST"
+        if [ -f "$PUB" ]; then
+            OLD=$(cat "$PUB")
+            if [ "$OLD" = "$NEW_LINE" ]; then
+                echo "  ✓ $HOST — already correct"
+                continue
+            fi
+        fi
+        echo "$NEW_LINE" > "$PUB"
+        echo "  ✓ $HOST — comment set to backup-$HOST"
+    done
 
 # Lint
 lint:

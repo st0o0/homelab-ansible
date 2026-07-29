@@ -46,7 +46,7 @@
 
 - name: Set backup public key fact from local file
   ansible.builtin.set_fact:
-    ssh_backup_public_key: "{{ _ssh_local_pubkey.stdout | trim }}"
+    ssh_backup_public_key: "{{ (_ssh_local_pubkey.stdout | trim).split()[:2] | join(' ') }} backup-{{ inventory_hostname }}"
   when: _ssh_local_backup.stat.exists
 
 # Uniform across all hosts (computed independently by each host from
