@@ -15,17 +15,17 @@
   ansible.builtin.meta: end_role
   when: not cron_enabled
 
-- name: Check Docker is installed before scheduling docker prune
+- name: Check Docker is installed
   ansible.builtin.stat:
     path: /usr/bin/docker
   register: _cron_docker_bin
   when: cron_docker_prune
 
-- name: Fail if docker prune cron requested but Docker isn't installed
+- name: Fail if docker prune requested but Docker isn't installed
   ansible.builtin.assert:
     that: _cron_docker_bin.stat.exists
     fail_msg: >-
-      cron_docker_prune is true but Docker isn't installed on this host.
+      cron_docker_prune is true but Docker isn't installed.
       Run the docker role first, or set cron_docker_prune: false.
   when: cron_docker_prune
 
