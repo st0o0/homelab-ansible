@@ -2,8 +2,8 @@
 # hostname_enabled: true
 
 # Shell
-motd_enabled: false
-dotfiles_enabled: false
+motd_enabled: true
+dotfiles_enabled: true
 
 # Unattended upgrades
 unattended_upgrades_enabled: true
