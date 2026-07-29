@@ -1,12 +1,5 @@
 - name: Restart node-stack
-  community.docker.docker_compose_v2:
-    project_src: "{{ node_stack_deploy_path }}"
-    files: >-
-      {{ ['compose.yml']
-         + (['compose.alloy.yml'] if node_stack_alloy_enabled else [])
-         + (['compose.hawser.yml'] if node_stack_hawser_enabled else [])
-         + (['compose.backrest.yml'] if node_stack_backrest_enabled else [])
-         + (['compose.ups.yml'] if node_stack_ups_enabled else [])
-         + (['compose.bifrost.yml'] if node_stack_bifrost_enabled else []) }}
-    state: present
-    recreate: always
+  ansible.builtin.command:
+    cmd: docker compose up -d --force-recreate --remove-orphans
+    chdir: "{{ node_stack_deploy_path }}"
+  when: not ansible_check_mode

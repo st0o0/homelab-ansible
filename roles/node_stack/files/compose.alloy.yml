@@ -1,7 +1,7 @@
 services:
   alloy:
     image: grafana/alloy:v1.17.1
-    container_name: node-stack-alloy
+    container_name: alloy
     restart: unless-stopped
     logging:
       driver: json-file
@@ -18,6 +18,13 @@ services:
       - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
       - REMOTE_WRITE_URL=${REMOTE_WRITE_URL}
       - LOGS_PUSH_URL=${LOGS_PUSH_URL}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - alloy-data:/var/lib/alloy/data

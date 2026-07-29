@@ -1,42 +1,20 @@
 {
   "modno": 0,
   "instance": "{{ node_stack_hostname }}",
-  "repos": [
+  "repos": [],
+  "plans": [],
+  "auth": {
+    "disabled": false,
+    "users": []
+  }{{ ',' if node_stack_backrest_discord_webhook }}
+{% if node_stack_backrest_discord_webhook %}
+  "hooks": [
     {
-      "id": "docker-webdav",
-      "uri": "{{ node_stack_backrest_repo_uri }}",
-      "password": "{{ node_stack_backrest_repo_password }}",
-      "env": [
-        "RCLONE_WEBDAV_URL={{ node_stack_backrest_webdav_url }}",
-        "RCLONE_WEBDAV_USER={{ node_stack_backrest_webdav_user }}",
-        "RCLONE_WEBDAV_PASS={{ node_stack_backrest_webdav_pass }}"
-      ],
-      "prunePolicy": {
-        "policyKeepLastN": 0,
-        "policyKeepDaily": 7,
-        "policyKeepWeekly": 4,
-        "policyKeepMonthly": 6,
-        "policyKeepYearly": 0
-      }
-    }
-  ],
-  "plans": [
-    {
-      "id": "docker-stacks",
-      "repo": "docker-webdav",
-      "paths": ["/docker"],
-      "excludes": ["**/logs/**", "**/*.log", "**/cache/**"],
-      "schedule": {
-        "clock": "CLOCK_LOCAL",
-        "cron": "0 3 * * *"
-      },
-      "retention": {
-        "policyKeepLastN": 0,
-        "policyKeepDaily": 7,
-        "policyKeepWeekly": 4,
-        "policyKeepMonthly": 6,
-        "policyKeepYearly": 0
+      "conditions": ["CONDITION_SNAPSHOT_ERROR", "CONDITION_ANY_ERROR"],
+      "actionDiscord": {
+        "webhookUrl": "{{ node_stack_backrest_discord_webhook }}"
       }
     }
   ]
+{% endif %}
 }

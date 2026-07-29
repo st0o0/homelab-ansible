@@ -3,7 +3,7 @@
 services:
   bifrost:
     image: ghcr.io/st0o0/bifrost:latest
-    container_name: node-stack-bifrost
+    container_name: bifrost
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
@@ -27,6 +27,13 @@ services:
       - BIFROST_RECONNECT=on
       - BIFROST_HEALTHCHECK=on
       - BIFROST_PROBE=off
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          memory: 128M
 
   alloy:
     network_mode: service:bifrost

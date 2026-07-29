@@ -1,7 +1,7 @@
 services:
   nut-upsd:
     image: instantlinux/nut-upsd
-    container_name: node-stack-nut-upsd
+    container_name: nut-upsd
     restart: unless-stopped
     logging:
       driver: json-file
@@ -18,6 +18,13 @@ services:
       - POLLINTERVAL=${NUT_POLLINTERVAL}
       - API_USER=${NUT_API_USER}
       - API_PASSWORD=${NUT_API_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          memory: 128M
     devices:
       - /dev/bus/usb:/dev/bus/usb
     ports:
@@ -27,7 +34,7 @@ services:
 
   peanut:
     image: brandawg93/peanut:latest
-    container_name: node-stack-peanut
+    container_name: peanut
     restart: unless-stopped
     logging:
       driver: json-file
@@ -38,6 +45,13 @@ services:
       - ./peanut:/config
     ports:
       - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          memory: 128M
     environment:
       - PUID=1000
       - PGID=1000

@@ -1,7 +1,7 @@
 services:
   backrest:
     image: garethgeorge/backrest:latest
-    container_name: node-stack-backrest
+    container_name: backrest
     restart: unless-stopped
     logging:
       driver: json-file
@@ -12,10 +12,17 @@ services:
       - TZ=${TZ}
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
     ports:
-      - "${BACKREST_PORT}:9898"
+      - "127.0.0.1:${BACKREST_PORT}:9898"
     volumes:
-      - ./backrest/config.json:/config/config.json:ro
+      - ./backrest/config:/config
       - backrest-data:/data
       - /docker:/docker:ro
 
