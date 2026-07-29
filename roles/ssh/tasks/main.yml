@@ -10,7 +10,6 @@
   ansible.builtin.user:
     name: "{{ ssh_user }}"
     groups: sudo
-    shell: /bin/bash
     create_home: true
   when: ansible_user_id == 'root'
 
