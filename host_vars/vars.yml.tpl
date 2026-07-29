@@ -23,6 +23,22 @@ unattended_upgrades_enabled: true
 # ufw_extra_rules:
 #   - { rule: allow, port: 8080, proto: tcp, comment: "Web" }
 
+# Fail2Ban
+# fail2ban_enabled: true
+# fail2ban_extra_jails:
+#   - { name: nginx-http-auth, enabled: true, port: "http,https", filter: nginx-http-auth, logpath: /var/log/nginx/error.log }
+
+# Auditd
+# auditd_enabled: true
+# auditd_extra_rules:
+#   - "-w /etc/hosts -p wa -k network"
+
+# Sysctl hardening
+# sysctl_hardening_enabled: true
+
+# PAM password quality
+# pam_pwquality_enabled: true
+
 # Docker
 # docker_enabled: true
 
@@ -34,9 +50,22 @@ unattended_upgrades_enabled: true
 # cron_extra_jobs:
 #   - { name: "cleanup-logs", job: "find /var/log -name '*.gz' -mtime +30 -delete", schedule: "0 4 * * 0" }
 
+# rkhunter
+# rkhunter_enabled: true
+# rkhunter_schedule: "0 4 * * *"
+
+# ClamAV
+# clamav_enabled: true
+# clamav_schedule: "0 3 * * *"
+
+# Lynis
+# lynis_enabled: true
+# lynis_schedule: "0 5 * * 0"
+
 # Node agent
 node_stack_alloy_enabled: false
 node_stack_hawser_enabled: false
 node_stack_bifrost_enabled: false
 node_stack_ups_enabled: false
 node_stack_backrest_enabled: false
+# node_stack_backrest_port: 9898
