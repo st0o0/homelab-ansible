@@ -26,15 +26,46 @@
   when: not komodo_enabled
 
 # -- Prerequisites --
-- name: Install sops, age, and jq
+- name: Install jq
   ansible.builtin.apt:
-    name:
-      - sops
-      - age
-      - jq
+    name: jq
     state: present
     update_cache: true
     cache_valid_time: 3600
+
+- name: Set architecture fact for sops/age downloads
+  ansible.builtin.set_fact:
+    _komodo_arch: >-
+      {{ 'arm64' if ansible_architecture == 'aarch64'
+         else 'amd64' if ansible_architecture == 'x86_64'
+         else ansible_architecture }}
+
+- name: Check if sops is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/sops
+  register: _komodo_sops_bin
+
+- name: Install sops binary
+  ansible.builtin.get_url:
+    url: "https://github.com/getsops/sops/releases/download/v{{ komodo_sops_version }}/sops-v{{ komodo_sops_version }}.linux.{{ _komodo_arch }}"
+    dest: /usr/local/bin/sops
+    mode: "0755"
+  when: not _komodo_sops_bin.stat.exists
+
+- name: Check if age is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/age
+  register: _komodo_age_bin
+
+- name: Download and install age
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL "https://dl.filippo.io/age/latest?for=linux/{{ _komodo_arch }}" -o /tmp/komodo-age.tar.gz
+    tar -xzf /tmp/komodo-age.tar.gz -C /usr/local/bin/ --strip-components=1 age/age age/age-keygen
+    rm -f /tmp/komodo-age.tar.gz
+  args:
+    executable: /bin/bash
+  when: not _komodo_age_bin.stat.exists
 
 # -- Deploy --
 - name: Create deploy directory

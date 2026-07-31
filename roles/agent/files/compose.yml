@@ -5,9 +5,9 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
-  periphery:
+  agent:
     image: ghcr.io/moghtech/komodo-periphery:${KOMODO_IMAGE_TAG:-2}
-    container_name: ${PERIPHERY_CONTAINER_NAME:-komodo-periphery}
+    container_name: ${PERIPHERY_CONTAINER_NAME:-agent}
     init: true
     restart: unless-stopped
     logging: *default-logging
@@ -25,7 +25,7 @@ services:
       - keys:/config/keys
       - /var/run/docker.sock:/var/run/docker.sock
       - /proc:/proc
-      - ${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}:${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}
+      - ${PERIPHERY_ROOT_DIRECTORY:-./data}:${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}
     deploy:
       resources:
         limits:
