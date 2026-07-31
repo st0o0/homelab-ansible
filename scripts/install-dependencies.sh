@@ -128,6 +128,25 @@ for rc in /etc/bash.bashrc /etc/zsh/zshrc /etc/profile /etc/zsh/zprofile; do
     fi
 done
 
+echo "==> Configuring host-aware 'just' completions (deploy/bootstrap/vars/secrets/trust/rename)..."
+JUST_COMPLETION_MARKER="# homelab-catalog: just completions"
+REPO_ROOT="$(pwd)"
+JUST_COMPLETION_SNIPPET="
+${JUST_COMPLETION_MARKER}
+if command -v just >/dev/null 2>&1; then
+    eval \"\$(just --completions zsh)\"
+    [ -f \"${REPO_ROOT}/.devcontainer/completions/just.zsh\" ] && source \"${REPO_ROOT}/.devcontainer/completions/just.zsh\"
+fi
+"
+sudo mkdir -p /etc/zsh
+sudo touch /etc/zsh/zshrc
+if ! sudo grep -q "$JUST_COMPLETION_MARKER" /etc/zsh/zshrc; then
+    printf '%s\n' "$JUST_COMPLETION_SNIPPET" | sudo tee -a /etc/zsh/zshrc > /dev/null
+    echo "    Added to /etc/zsh/zshrc"
+else
+    echo "    Already present in /etc/zsh/zshrc"
+fi
+
 echo "==> Setting up devcontainer-specific shell aliases..."
 ALIAS_DIR="$HOME/.bash_aliases.d"
 mkdir -p "$ALIAS_DIR"

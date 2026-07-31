@@ -15,3 +15,8 @@ fi
 
 echo "==> Pulling latest dotfiles and re-applying..."
 "$CHEZMOI" update --force
+
+if command -v just >/dev/null 2>&1 && command -v ansible-inventory >/dev/null 2>&1; then
+    echo "==> Syncing SSH config entries for hosts with a restored backup key..."
+    just sshsync || true
+fi
