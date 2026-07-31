@@ -72,3 +72,7 @@ cron_docker_prune: true
 # Hawser (Dockhand agent)
 hawser_enabled: false
 hawser_bifrost: false
+
+# Komodo (Core host — Core + bundled local Periphery; Mongo runs on FeelsDataMan)
+komodo_enabled: true
+agent_enabled: false

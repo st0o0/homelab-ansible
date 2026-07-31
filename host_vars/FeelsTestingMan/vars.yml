@@ -63,5 +63,9 @@ cron_docker_prune: true
 # lynis_schedule: "0 5 * * 0"
 
 # Hawser (Dockhand agent)
-hawser_enabled: true
+hawser_enabled: false
 hawser_bifrost: false
+# Komodo (Welle 2 — Periphery only)
+komodo_enabled: false
+agent_enabled: true
+agent_bifrost: false

@@ -64,3 +64,8 @@ cron_docker_prune: false
 # Hawser (Dockhand agent)
 hawser_enabled: false
 hawser_bifrost: false
+
+# Komodo (pilot host — Periphery only, points at FeelsCozyMan)
+komodo_enabled: false
+agent_enabled: false
+agent_bifrost: false
