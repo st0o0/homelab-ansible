@@ -1,0 +1,2 @@
+galaxy_info:
+  description: "Read-only inventory of Docker Compose stacks and their env var names, per host"

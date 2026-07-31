@@ -1,0 +1,46 @@
+# -- Prerequisites --
+- name: Install jq
+  ansible.builtin.apt:
+    name: jq
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  check_mode: false
+
+# -- Collect (per host) --
+- name: Collect stack/env inventory
+  ansible.builtin.script: collect_stacks.sh
+  register: _stack_report_raw
+  changed_when: false
+  check_mode: false
+
+- name: Set stack report fact
+  ansible.builtin.set_fact:
+    stack_report_data: "{{ _stack_report_raw.stdout | from_json }}"
+
+# -- Aggregate (once, locally) --
+- name: Create reports directory
+  ansible.builtin.file:
+    path: "{{ stack_report_output_path | dirname }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Aggregate stack report across hosts
+  ansible.builtin.set_fact:
+    _stack_report_all: "{{ _stack_report_all | default({}) | combine({item: hostvars[item].stack_report_data}) }}"
+  loop: "{{ ansible_play_hosts }}"
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: Write aggregated stack report
+  ansible.builtin.copy:
+    content: "{{ _stack_report_all | to_nice_json }}\n"
+    dest: "{{ stack_report_output_path }}"
+    mode: "0644"
+  delegate_to: localhost
+  become: false
+  run_once: true

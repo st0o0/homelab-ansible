@@ -1,0 +1,1 @@
+stack_report_output_path: "{{ playbook_dir }}/reports/stack-report.json"

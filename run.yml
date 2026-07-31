@@ -42,3 +42,5 @@
       tags: [komodo]
     - role: agent
       tags: [agent]
+    - role: stack_report
+      tags: [stack_report, never]

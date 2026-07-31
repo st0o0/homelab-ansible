@@ -7,3 +7,4 @@ Thumbs.db
 .devcontainer/linux/devcontainer-lock.json
 .devcontainer/windows/devcontainer-lock.json
 node_modules/
+reports/
