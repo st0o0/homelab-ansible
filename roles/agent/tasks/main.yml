@@ -1,0 +1,95 @@
+# -- Teardown (disabled) --
+- name: Check if deploy directory exists (teardown)
+  ansible.builtin.stat:
+    path: "{{ agent_deploy_path }}"
+  register: _agent_dir_teardown
+  when: not agent_enabled
+
+- name: Stop agent when disabled
+  community.docker.docker_compose_v2:
+    project_src: "{{ agent_deploy_path }}"
+    state: absent
+    remove_orphans: true
+  check_mode: false
+  when:
+    - not agent_enabled
+    - _agent_dir_teardown.stat.exists
+
+- name: Remove agent deploy directory when disabled
+  ansible.builtin.file:
+    path: "{{ agent_deploy_path }}"
+    state: absent
+  when: not agent_enabled
+
+- name: Skip agent if disabled
+  ansible.builtin.meta: end_role
+  when: not agent_enabled
+
+# -- Deploy --
+- name: Create deploy directory
+  ansible.builtin.file:
+    path: "{{ agent_deploy_path }}"
+    state: directory
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0755"
+
+- name: Create komodo root directory
+  ansible.builtin.file:
+    path: "{{ agent_root_directory }}"
+    state: directory
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0755"
+
+- name: Deploy compose file
+  ansible.builtin.copy:
+    src: compose.yml
+    dest: "{{ agent_deploy_path }}/compose.yml"
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0644"
+  notify: Restart agent
+
+- name: Deploy Bifrost network override
+  ansible.builtin.copy:
+    src: compose.override.bifrost.yml
+    dest: "{{ agent_deploy_path }}/compose.override.bifrost.yml"
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0644"
+  when: agent_bifrost
+  notify: Restart agent
+
+- name: Remove Bifrost network override when disabled
+  ansible.builtin.file:
+    path: "{{ agent_deploy_path }}/compose.override.bifrost.yml"
+    state: absent
+  when: not agent_bifrost
+  notify: Restart agent
+
+- name: Deploy environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ agent_deploy_path }}/.env"
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0600"
+  notify: Restart agent
+
+# -- Ensure running --
+- name: Wait for bifrost container
+  community.docker.docker_container_info:
+    name: bifrost
+  register: _agent_bifrost_container
+  until: _agent_bifrost_container.container.State.Running | default(false)
+  retries: 12
+  delay: 5
+  when: agent_bifrost
+
+- name: Ensure agent is running
+  community.docker.docker_compose_v2:
+    project_src: "{{ agent_deploy_path }}"
+    state: present
+    remove_orphans: true
+  ignore_errors: "{{ ansible_check_mode }}"

@@ -1,0 +1,2 @@
+galaxy_info:
+  description: "Audit logging for identity/sudoers/ssh/cron changes"

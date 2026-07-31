@@ -1,0 +1,6 @@
+- name: Restart agent
+  community.docker.docker_compose_v2:
+    project_src: "{{ agent_deploy_path }}"
+    state: restarted
+    remove_orphans: true
+  ignore_errors: "{{ ansible_check_mode }}"

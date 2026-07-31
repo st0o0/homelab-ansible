@@ -1,0 +1,2 @@
+galaxy_info:
+  description: "Ban IPs after repeated failed SSH logins"

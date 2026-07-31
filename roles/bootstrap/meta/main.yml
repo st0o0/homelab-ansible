@@ -1,0 +1,2 @@
+galaxy_info:
+  description: "First-run setup: hostname, timezone, base packages (+ ssh)"

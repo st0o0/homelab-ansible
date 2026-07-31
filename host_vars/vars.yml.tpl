@@ -67,6 +67,6 @@ hawser_enabled: false
 hawser_bifrost: false
 
 # Komodo
-komodo_core_enabled: false
-komodo_periphery_enabled: false
-komodo_periphery_bifrost: false
+komodo_enabled: false
+agent_enabled: false
+agent_bifrost: false

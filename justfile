@@ -54,36 +54,42 @@ exec *ARGS:
 
 # --- Ansible ---
 
-# Show available deploy tags with descriptions
+# Show available deploy tags with descriptions (derived from run.yml + each role's meta/main.yml)
 tags:
-    #!/usr/bin/env bash
-    cat <<'EOF'
-    Tag                  Description
-    ───                  ───────────
-    bootstrap            First-run setup: hostname, timezone, base packages (+ ssh)
-    ssh                  SSH hardening, deploy user, backup keys (via Bitwarden)
-    swap                 Swap file management (create/remove)
-    unattended_upgrades  Automatic security updates
-    ufw                  Firewall rules (UFW)
-    fail2ban             Ban IPs after repeated failed SSH logins
-    auditd               Audit logging for identity/sudoers/ssh/cron changes
-    sysctl_hardening     Kernel network hardening (sysctl)
-    pam_pwquality        Password quality enforcement (PAM)
-    docker               Docker Engine install, user setup (← bootstrap)
-    ups                  NUT UPS client monitoring
-    cron                 Cron jobs: docker prune, custom jobs (← docker)
-    rkhunter             Rootkit scanning (daily cron)
-    clamav               Malware scanning (daily cron)
-    lynis                Security audit report (weekly cron)
-    shell                MOTD, chezmoi dotfiles, shell config (← ssh)
-    bifrost              WireGuard tunnel + CNAF sidecar (← docker)
-    hawser               Dockhand edge agent, optional Bifrost network (← docker)
+    #!/usr/bin/env python3
+    import yaml
 
-    Usage:
-      just deploy HOST --tags TAG[,TAG]     Deploy specific tags to a host
-      just deploy HOST --check              Dry-run on a host
-      just run TAG                          Run a tag across all hosts
-    EOF
+    with open("run.yml") as f:
+        play = yaml.safe_load(f)[0]
+
+    def describe(role):
+        try:
+            with open(f"roles/{role}/meta/main.yml") as f:
+                meta = yaml.safe_load(f) or {}
+        except FileNotFoundError:
+            return "(no meta/main.yml)"
+        return (meta.get("galaxy_info") or {}).get("description", "(no galaxy_info.description set)")
+
+    rows = []
+    for entry in play.get("roles", []):
+        if isinstance(entry, str):
+            role, role_tags = entry, []
+        else:
+            role, role_tags = entry["role"], entry.get("tags", [])
+        primary = role if role in role_tags else next((t for t in role_tags if t != "never"), role)
+        rows.append((primary, describe(role)))
+
+    width = max((len(tag) for tag, _ in rows), default=3)
+    print(f"{'Tag':<{width}}  Description")
+    print(f"{'─' * width}  {'─' * 11}")
+    for tag, desc in rows:
+        print(f"{tag:<{width}}  {desc}")
+
+    print()
+    print("Usage:")
+    print("  just deploy HOST --tags TAG[,TAG]     Deploy specific tags to a host")
+    print("  just deploy HOST --check              Dry-run on a host")
+    print("  just run TAG                          Run a tag across all hosts")
 
 # Bootstrap a new host (first run, as root with password)
 bootstrap HOST USER="root":

@@ -2,8 +2,7 @@
   ansible.builtin.set_fact:
     _bifrost_needed: >-
       {{ hawser_bifrost | default(false)
-         or komodo_core_bifrost | default(false)
-         or komodo_periphery_bifrost | default(false) }}
+         or agent_bifrost | default(false) }}
 
 - name: Check if deploy directory exists (teardown)
   ansible.builtin.stat:

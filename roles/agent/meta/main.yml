@@ -1,0 +1,7 @@
+galaxy_info:
+  description: "Komodo Periphery: agent, optional Bifrost network"
+
+dependencies:
+  - role: docker
+  - role: bifrost
+    when: agent_bifrost

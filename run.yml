@@ -38,7 +38,7 @@
       tags: [bifrost]
     - role: hawser
       tags: [hawser]
-    - role: komodo_core
-      tags: [komodo, komodo_core]
-    - role: komodo_periphery
-      tags: [komodo, komodo_periphery]
+    - role: komodo
+      tags: [komodo]
+    - role: agent
+      tags: [agent]

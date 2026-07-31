@@ -1,0 +1,2 @@
+galaxy_info:
+  description: "SSH hardening, deploy user, backup keys (via Bitwarden)"

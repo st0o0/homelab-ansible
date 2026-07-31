@@ -1,5 +1,0 @@
-services:
-  core:
-    network_mode: container:${BIFROST_CONTAINER_NAME:-bifrost}
-  periphery:
-    network_mode: container:${BIFROST_CONTAINER_NAME:-bifrost}

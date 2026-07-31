@@ -1,0 +1,6 @@
+- name: Restart komodo
+  community.docker.docker_compose_v2:
+    project_src: "{{ komodo_deploy_path }}"
+    state: restarted
+    remove_orphans: true
+  ignore_errors: "{{ ansible_check_mode }}"

@@ -1,0 +1,5 @@
+galaxy_info:
+  description: "Komodo Core: management server + bundled MongoDB and local periphery (SOPS/age key setup)"
+
+dependencies:
+  - role: docker

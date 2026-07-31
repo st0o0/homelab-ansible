@@ -1,4 +1,0 @@
-dependencies:
-  - role: docker
-  - role: bifrost
-    when: komodo_periphery_bifrost
