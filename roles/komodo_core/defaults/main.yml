@@ -1,0 +1,15 @@
+komodo_core_deploy_path: /docker/komodo
+komodo_core_enabled: true
+komodo_core_bifrost: false
+komodo_core_tz: Europe/Berlin
+komodo_core_image_tag: "2"
+komodo_core_port: 9120
+komodo_core_bind_ip: "127.0.0.1"
+komodo_core_host: "https://komodo.local"
+komodo_core_title: "Homelab"
+komodo_core_first_server_name: "{{ inventory_hostname }}"
+komodo_core_monitoring_interval: "15-sec"
+komodo_core_resource_poll_interval: "5-min"
+komodo_core_backups_path: /etc/komodo/backups
+komodo_core_periphery_root: /etc/komodo
+komodo_core_mongo_cache_gb: "0.25"

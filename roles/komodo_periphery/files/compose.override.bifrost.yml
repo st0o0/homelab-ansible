@@ -1,0 +1,3 @@
+services:
+  periphery:
+    network_mode: container:${BIFROST_CONTAINER_NAME:-bifrost}

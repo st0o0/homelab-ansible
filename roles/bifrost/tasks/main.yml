@@ -1,8 +1,15 @@
+- name: Set bifrost_needed fact
+  ansible.builtin.set_fact:
+    _bifrost_needed: >-
+      {{ hawser_bifrost | default(false)
+         or komodo_core_bifrost | default(false)
+         or komodo_periphery_bifrost | default(false) }}
+
 - name: Check if deploy directory exists (teardown)
   ansible.builtin.stat:
     path: "{{ bifrost_deploy_path }}"
   register: _bifrost_dir_teardown
-  when: not hawser_bifrost
+  when: not _bifrost_needed
 
 - name: Stop bifrost when disabled
   community.docker.docker_compose_v2:
@@ -11,31 +18,19 @@
     remove_orphans: true
   check_mode: false
   when:
-    - not hawser_bifrost
+    - not _bifrost_needed
     - _bifrost_dir_teardown.stat.exists
 
 - name: Remove bifrost deploy directory when disabled
   ansible.builtin.file:
     path: "{{ bifrost_deploy_path }}"
     state: absent
-  when: not hawser_bifrost
+  when: not _bifrost_needed
 
 - name: Skip bifrost if disabled
   ansible.builtin.meta: end_role
-  when: not hawser_bifrost
+  when: not _bifrost_needed
 
-# ── Prechecks ───────────────────────────────────────────────────────
-- name: Check Docker is installed
-  ansible.builtin.stat:
-    path: /usr/bin/docker
-  register: _bifrost_docker_bin
-
-- name: Fail if Docker isn't installed
-  ansible.builtin.assert:
-    that: _bifrost_docker_bin.stat.exists
-    fail_msg: >-
-      bifrost requires Docker. Run the docker role first
-      (e.g. `just deploy <host>`, or `--tags docker,bifrost`).
 
 # ── Deploy ──────────────────────────────────────────────────────────
 - name: Create deploy directory

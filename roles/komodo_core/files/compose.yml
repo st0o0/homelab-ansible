@@ -1,0 +1,106 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: ${MONGO_CONTAINER_NAME:-komodo-mongo}
+    restart: unless-stopped
+    logging: *default-logging
+    command: --quiet --wiredTigerCacheSizeGB ${MONGO_CACHE_SIZE_GB:-0.25}
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${KOMODO_DATABASE_USERNAME:?KOMODO_DATABASE_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${KOMODO_DATABASE_PASSWORD:?KOMODO_DATABASE_PASSWORD is required}
+    labels:
+      komodo.skip:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  core:
+    image: ghcr.io/moghtech/komodo-core:${KOMODO_IMAGE_TAG:-2}
+    container_name: ${CORE_CONTAINER_NAME:-komodo-core}
+    init: true
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      mongo:
+        condition: service_started
+    ports:
+      - ${KOMODO_BIND_IP:-127.0.0.1}:${KOMODO_PORT:-9120}:9120
+    environment:
+      KOMODO_DATABASE_ADDRESS: mongo:27017
+      KOMODO_DATABASE_USERNAME: ${KOMODO_DATABASE_USERNAME:?KOMODO_DATABASE_USERNAME is required}
+      KOMODO_DATABASE_PASSWORD: ${KOMODO_DATABASE_PASSWORD:?KOMODO_DATABASE_PASSWORD is required}
+      KOMODO_HOST: ${KOMODO_HOST:-https://komodo.local}
+      KOMODO_TITLE: ${KOMODO_TITLE:-Homelab}
+      KOMODO_LOCAL_AUTH: ${KOMODO_LOCAL_AUTH:-true}
+      KOMODO_INIT_ADMIN_USERNAME: ${KOMODO_INIT_ADMIN_USERNAME:-admin}
+      KOMODO_INIT_ADMIN_PASSWORD: ${KOMODO_INIT_ADMIN_PASSWORD:?KOMODO_INIT_ADMIN_PASSWORD is required}
+      KOMODO_FIRST_SERVER_NAME: ${KOMODO_FIRST_SERVER_NAME:-local}
+      KOMODO_JWT_SECRET: ${KOMODO_JWT_SECRET:?KOMODO_JWT_SECRET is required}
+      KOMODO_WEBHOOK_SECRET: ${KOMODO_WEBHOOK_SECRET:?KOMODO_WEBHOOK_SECRET is required}
+      KOMODO_MONITORING_INTERVAL: ${KOMODO_MONITORING_INTERVAL:-15-sec}
+      KOMODO_RESOURCE_POLL_INTERVAL: ${KOMODO_RESOURCE_POLL_INTERVAL:-5-min}
+      KOMODO_PERIPHERY_PUBLIC_KEY: file:/config/keys/periphery.pub
+      KOMODO_DISABLE_USER_REGISTRATION: ${KOMODO_DISABLE_USER_REGISTRATION:-true}
+      KOMODO_DISABLE_CONFIRM_DIALOG: ${KOMODO_DISABLE_CONFIRM_DIALOG:-false}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - keys:/config/keys
+      - ${KOMODO_BACKUPS_PATH:-komodo-backups}:/backups
+      - ${KOMODO_SECRETS_FILE:-/dev/null}:/config/config.toml:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  periphery:
+    image: ghcr.io/moghtech/komodo-periphery:${KOMODO_IMAGE_TAG:-2}
+    container_name: ${PERIPHERY_CONTAINER_NAME:-komodo-periphery}
+    init: true
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      core:
+        condition: service_started
+    environment:
+      PERIPHERY_CORE_ADDRESS: ws://core:9120
+      PERIPHERY_CONNECT_AS: ${KOMODO_FIRST_SERVER_NAME:-local}
+      PERIPHERY_CORE_PUBLIC_KEYS: file:/config/keys/core.pub
+      PERIPHERY_ROOT_DIRECTORY: ${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}
+      PERIPHERY_INCLUDE_DISK_MOUNTS: /etc/hostname
+      PERIPHERY_DISABLE_TERMINALS: ${PERIPHERY_DISABLE_TERMINALS:-false}
+      PERIPHERY_DISABLE_CONTAINER_TERMINALS: ${PERIPHERY_DISABLE_CONTAINER_TERMINALS:-false}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - keys:/config/keys
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/proc
+      - ${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}:${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          memory: 64M
+
+volumes:
+  mongo-data:
+  mongo-config:
+  komodo-backups:
+  keys:

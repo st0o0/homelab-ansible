@@ -1,0 +1,38 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  periphery:
+    image: ghcr.io/moghtech/komodo-periphery:${KOMODO_IMAGE_TAG:-2}
+    container_name: ${PERIPHERY_CONTAINER_NAME:-komodo-periphery}
+    init: true
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      PERIPHERY_CORE_ADDRESS: ${PERIPHERY_CORE_ADDRESS:?PERIPHERY_CORE_ADDRESS is required}
+      PERIPHERY_CONNECT_AS: ${PERIPHERY_CONNECT_AS:?PERIPHERY_CONNECT_AS is required}
+      PERIPHERY_ONBOARDING_KEY: ${PERIPHERY_ONBOARDING_KEY:-}
+      PERIPHERY_CORE_PUBLIC_KEYS: file:/config/keys/core.pub
+      PERIPHERY_ROOT_DIRECTORY: ${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}
+      PERIPHERY_INCLUDE_DISK_MOUNTS: ${PERIPHERY_INCLUDE_DISK_MOUNTS:-/etc/hostname}
+      PERIPHERY_DISABLE_TERMINALS: ${PERIPHERY_DISABLE_TERMINALS:-false}
+      PERIPHERY_DISABLE_CONTAINER_TERMINALS: ${PERIPHERY_DISABLE_CONTAINER_TERMINALS:-false}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - keys:/config/keys
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/proc
+      - ${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}:${PERIPHERY_ROOT_DIRECTORY:-/etc/komodo}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          memory: 64M
+
+volumes:
+  keys:

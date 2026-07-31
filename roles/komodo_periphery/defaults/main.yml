@@ -1,0 +1,10 @@
+komodo_periphery_deploy_path: /docker/komodo-periphery
+komodo_periphery_enabled: true
+komodo_periphery_bifrost: false
+komodo_periphery_tz: Europe/Berlin
+komodo_periphery_image_tag: "2"
+komodo_periphery_connect_as: "{{ inventory_hostname }}"
+komodo_periphery_root_directory: /etc/komodo
+komodo_periphery_include_disk_mounts: /etc/hostname
+komodo_periphery_disable_terminals: false
+komodo_periphery_disable_container_terminals: false
