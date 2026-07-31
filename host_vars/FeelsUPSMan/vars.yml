@@ -1,5 +1,5 @@
 # Bootstrap
-bootstrap_hostname_enabled: true
+# bootstrap_hostname_enabled: true
 
 # Shell
 shell_motd_enabled: true

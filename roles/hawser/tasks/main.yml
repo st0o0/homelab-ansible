@@ -45,18 +45,6 @@
   ansible.builtin.meta: end_role
   when: not hawser_enabled
 
-# ── Prechecks ───────────────────────────────────────────────────────
-- name: Check Docker is installed
-  ansible.builtin.stat:
-    path: /usr/bin/docker
-  register: _hawser_docker_bin
-
-- name: Fail if Docker isn't installed
-  ansible.builtin.assert:
-    that: _hawser_docker_bin.stat.exists
-    fail_msg: >-
-      hawser requires Docker. Run the docker role first
-      (e.g. `just deploy <host>`, or `--tags docker,hawser`).
 
 # ── Deploy ──────────────────────────────────────────────────────────
 - name: Create deploy directory
@@ -103,6 +91,15 @@
   notify: Restart hawser
 
 # ── Ensure running ─────────────────────────────────────────────────
+- name: Wait for bifrost container
+  community.docker.docker_container_info:
+    name: bifrost
+  register: _hawser_bifrost_container
+  until: _hawser_bifrost_container.container.State.Running | default(false)
+  retries: 12
+  delay: 5
+  when: hawser_bifrost
+
 - name: Ensure hawser is running
   community.docker.docker_compose_v2:
     project_src: "{{ hawser_deploy_path }}"

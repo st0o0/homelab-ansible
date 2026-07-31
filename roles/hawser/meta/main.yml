@@ -1,0 +1,4 @@
+dependencies:
+  - role: docker
+  - role: bifrost
+    when: hawser_bifrost

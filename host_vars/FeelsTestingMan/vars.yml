@@ -1,5 +1,5 @@
 # Bootstrap
-bootstrap_hostname_enabled: false
+bootstrap_hostname_enabled: true
 
 # Shell
 shell_motd_enabled: true
@@ -11,8 +11,8 @@ unattended_upgrades_enabled: true
 #   - "docker-ce"
 #   - "docker-ce-cli"
 #   - "containerd.io"
-unattended_upgrades_skip_reboot_required: true
-unattended_upgrades_auto_reboot: false
+# unattended_upgrades_skip_reboot_required: false
+# unattended_upgrades_auto_reboot: false
 # unattended_upgrades_auto_reboot_time: "04:00"
 
 # Swap
@@ -40,10 +40,13 @@ unattended_upgrades_auto_reboot: false
 # pam_pwquality_enabled: true
 
 # Docker
-# docker_enabled: true
+docker_enabled: true
+
+# UPS
+# ups_client_enabled: false
 
 # Cron
-# cron_docker_prune: true
+cron_docker_prune: true
 # cron_extra_jobs:
 #   - { name: "cleanup-logs", job: "find /var/log -name '*.gz' -mtime +30 -delete", schedule: "0 4 * * 0" }
 
@@ -61,4 +64,4 @@ unattended_upgrades_auto_reboot: false
 
 # Hawser (Dockhand agent)
 hawser_enabled: true
-hawser_bifrost: true
+hawser_bifrost: false

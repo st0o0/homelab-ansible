@@ -6,7 +6,7 @@ x-logging: &default-logging
 
 services:
   bifrost:
-    image: ghcr.io/st0o0/bifrost:v0.2.0
+    image: ghcr.io/st0o0/bifrost:0.2.0
     container_name: bifrost
     restart: unless-stopped
     logging: *default-logging
@@ -39,19 +39,24 @@ services:
         reservations:
           memory: 128M
 
-  cnaf:
-    image: buxxdev/containernetwork-autofix
-    container_name: bifrost-cnaf
+  eir:
+    image: ghcr.io/st0o0/eir:latest
+    container_name: eir
     restart: unless-stopped
     logging: *default-logging
     depends_on:
       bifrost:
         condition: service_started
     environment:
-      - MASTER_CONTAINER=bifrost
-      - RESTART_WAIT_TIME=15
+      - EIR_MASTERS=bifrost
+      - EIR_DISCOVERY_MODE=inspect
+      - EIR_STABILIZE_WAIT=15s
+      - EIR_MAX_RETRIES=3
+      - EIR_RETRY_BACKOFF=5s
+      - EIR_LOG_LEVEL=info
+      - EIR_LOG_FORMAT=text
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       resources:
         limits:
