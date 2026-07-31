@@ -1,0 +1,21 @@
+# Updates the Komodo fleet: Core first, then Agent — never the reverse.
+# Bump komodo_version in group_vars/all/komodo.yml before running.
+---
+- name: Update Komodo Core
+  hosts: all
+  become: true
+  any_errors_fatal: true
+  roles:
+    - role: update_komodo
+      tags: [update_komodo]
+      vars:
+        _update_komodo_target: core
+
+- name: Update Komodo Agent
+  hosts: all
+  become: true
+  roles:
+    - role: update_komodo
+      tags: [update_komodo]
+      vars:
+        _update_komodo_target: agent

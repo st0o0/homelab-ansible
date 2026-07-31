@@ -1,0 +1,4 @@
+galaxy_info:
+  description: "Komodo update orchestration: pulls the pinned image tag and health-checks Core or Agent"
+
+dependencies: []

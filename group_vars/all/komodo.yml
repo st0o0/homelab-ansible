@@ -1,0 +1,3 @@
+# Single source of truth for the Komodo Core/Agent image tag.
+# Core and Agent must stay version-matched — bump this one value to update the fleet.
+komodo_version: "2"

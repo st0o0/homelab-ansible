@@ -1,0 +1,58 @@
+# -- Core --
+- name: Update Komodo Core
+  when:
+    - _update_komodo_target == 'core'
+    - komodo_enabled
+  block:
+    - name: Pull and recreate Core/local Agent containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ komodo_deploy_path }}"
+        pull: always
+        state: present
+        remove_orphans: true
+
+    - name: Verify Core container is running
+      community.docker.docker_container_info:
+        name: "{{ update_komodo_core_container }}"
+      register: _update_komodo_core_info
+      until: _update_komodo_core_info.container.State.Status == 'running'
+      retries: "{{ update_komodo_health_retries }}"
+      delay: "{{ update_komodo_health_delay }}"
+
+    - name: Verify local Agent container is running
+      community.docker.docker_container_info:
+        name: "{{ update_komodo_core_periphery_container }}"
+      register: _update_komodo_core_periphery_info
+      until: _update_komodo_core_periphery_info.container.State.Status == 'running'
+      retries: "{{ update_komodo_health_retries }}"
+      delay: "{{ update_komodo_health_delay }}"
+
+    - name: Wait for Core to accept connections
+      ansible.builtin.uri:
+        url: "http://{{ komodo_bind_ip }}:{{ komodo_port }}/"
+        status_code: 100-499
+      register: _update_komodo_core_health
+      until: _update_komodo_core_health is succeeded
+      retries: "{{ update_komodo_health_retries }}"
+      delay: "{{ update_komodo_health_delay }}"
+
+# -- Agent --
+- name: Update Komodo Agent
+  when:
+    - _update_komodo_target == 'agent'
+    - agent_enabled
+  block:
+    - name: Pull and recreate Agent container
+      community.docker.docker_compose_v2:
+        project_src: "{{ agent_deploy_path }}"
+        pull: always
+        state: present
+        remove_orphans: true
+
+    - name: Verify Agent container is running
+      community.docker.docker_container_info:
+        name: "{{ update_komodo_agent_container }}"
+      register: _update_komodo_agent_info
+      until: _update_komodo_agent_info.container.State.Status == 'running'
+      retries: "{{ update_komodo_health_retries }}"
+      delay: "{{ update_komodo_health_delay }}"

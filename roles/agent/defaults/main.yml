@@ -1,10 +1,10 @@
-agent_deploy_path: /docker/komodo-periphery
-agent_enabled: true
+agent_deploy_path: /docker/agent
+agent_enabled: false
 agent_bifrost: false
 agent_tz: Europe/Berlin
-agent_image_tag: "2"
+agent_image_tag: "{{ komodo_version }}"
 agent_connect_as: "{{ inventory_hostname }}"
-agent_root_directory: /etc/komodo
+agent_root_directory: /docker/agent/data
 agent_include_disk_mounts: /etc/hostname
 agent_disable_terminals: false
 agent_disable_container_terminals: false
